@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
 import 'package:finance_tracker/core/constants/app_colors.dart';
 import 'package:finance_tracker/core/utils/currency_formatter.dart';
+import 'package:finance_tracker/core/utils/responsive_utils.dart';
 import 'package:finance_tracker/data/models/saving_model.dart';
 import 'package:finance_tracker/data/repositories/finance_repository.dart';
 
@@ -23,35 +24,37 @@ class SavingsView extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('New Savings Goal'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Goal Name',
-                hintText: 'e.g. Emergency Fund, Car, Vacation',
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Goal Name',
+                  hintText: 'e.g. Emergency Fund, Car, Vacation',
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: targetController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                prefixText: '${repo.settings.value.currencySymbol} ',
-                labelText: 'Target Amount',
+              const SizedBox(height: 12),
+              TextField(
+                controller: targetController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  prefixText: '${repo.settings.value.currencySymbol} ',
+                  labelText: 'Target Amount',
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: initialAmountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                prefixText: '${repo.settings.value.currencySymbol} ',
-                labelText: 'Initial Balance (Optional)',
+              const SizedBox(height: 12),
+              TextField(
+                controller: initialAmountController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  prefixText: '${repo.settings.value.currencySymbol} ',
+                  labelText: 'Initial Balance (Optional)',
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
@@ -154,7 +157,7 @@ class SavingsView extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 900),
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: context.pagePadding,
               children: [
                 // Top Savings Metrics Card
                 Container(
@@ -172,26 +175,33 @@ class SavingsView extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Total Savings in Goals',
-                                style: TextStyle(color: Colors.white70, fontSize: 13),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                CurrencyFormatter.format(totalAccumulated),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Total Savings in Goals',
+                                  style: TextStyle(color: Colors.white70, fontSize: 13),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 4),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    CurrencyFormatter.format(totalAccumulated),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(16),
@@ -201,7 +211,7 @@ class SavingsView extends StatelessWidget {
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                                fontSize: 11,
                               ),
                             ),
                           ),
@@ -279,22 +289,28 @@ class SavingsView extends StatelessWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.savings.withOpacity(0.12),
-                                        borderRadius: BorderRadius.circular(10),
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.savings.withOpacity(0.12),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: const Icon(Icons.flag, color: AppColors.savings, size: 20),
                                       ),
-                                      child: const Icon(Icons.flag, color: AppColors.savings, size: 20),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      goal.name,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                    ),
-                                  ],
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          goal.name,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
@@ -302,14 +318,21 @@ class SavingsView extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 12),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  '${CurrencyFormatter.format(goal.currentAmount)} / ${CurrencyFormatter.format(goal.targetAmount)}',
-                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                Expanded(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      '${CurrencyFormatter.format(goal.currentAmount)} / ${CurrencyFormatter.format(goal.targetAmount)}',
+                                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                    ),
+                                  ),
                                 ),
+                                const SizedBox(width: 8),
                                 Text(
                                   '${(progress * 100).toInt()}%',
                                   style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.savings),
@@ -330,17 +353,22 @@ class SavingsView extends StatelessWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  'Remaining: ${CurrencyFormatter.format(goal.remainingAmount)}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                                Expanded(
+                                  child: Text(
+                                    'Remaining: ${CurrencyFormatter.format(goal.remainingAmount)}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
+                                const SizedBox(width: 8),
                                 ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppColors.savings,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                     minimumSize: Size.zero,
                                   ),
                                   onPressed: () => _showDepositDialog(context, goal),
@@ -362,6 +390,7 @@ class SavingsView extends StatelessWidget {
         );
       }),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'fab_savings',
         backgroundColor: AppColors.savings,
         foregroundColor: Colors.white,
         tooltip: 'New Goal',

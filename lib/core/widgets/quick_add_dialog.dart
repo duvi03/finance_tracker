@@ -228,6 +228,7 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final surfaceColor = isDark ? AppColors.darkSurface : Colors.white;
+    final isSmall = MediaQuery.of(context).size.width < 360;
 
     final categoriesForType = repo.categories
         .where((c) =>
@@ -237,11 +238,14 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
         .toList();
 
     return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.9,
+      ),
       decoration: BoxDecoration(
         color: surfaceColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: EdgeInsets.symmetric(horizontal: isSmall ? 14 : 20, vertical: 16),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -265,6 +269,8 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
               isScrollable: true,
               labelColor: AppColors.primary,
               indicatorColor: AppColors.primary,
+              tabAlignment: TabAlignment.start,
+              labelPadding: EdgeInsets.symmetric(horizontal: isSmall ? 10 : 16),
               tabs: const [
                 Tab(text: 'Expense'),
                 Tab(text: 'Income'),
@@ -273,18 +279,18 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
                 Tab(text: 'Gold'),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // Amount Input
             TextField(
               controller: _amountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               autofocus: true,
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: isSmall ? 24 : 28, fontWeight: FontWeight.bold),
               decoration: InputDecoration(
                 prefixText: '${repo.settings.value.currencySymbol} ',
                 prefixStyle: TextStyle(
-                  fontSize: 28,
+                  fontSize: isSmall ? 24 : 28,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primary,
                 ),
@@ -292,7 +298,7 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
                 labelText: _currentType == TransactionType.emi ? 'Total Purchase Cost' : 'Amount',
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
 
             // Title / Description
             TextField(
@@ -304,7 +310,7 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
                 prefixIcon: const Icon(Icons.edit_note),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
 
             // Specific fields based on type
             if (_currentType == TransactionType.emi) ...[
@@ -317,7 +323,7 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
                   helperText: 'e.g. 3, 6, 12, 24 months',
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
             ],
 
             if (_currentType == TransactionType.gold) ...[
@@ -334,15 +340,15 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
                     flex: 2,
                     child: DropdownButtonFormField<GoldUnit>(
                       value: _goldUnit,
                       decoration: const InputDecoration(labelText: 'Unit'),
                       items: const [
-                        DropdownMenuItem(value: GoldUnit.gram, child: Text('Grams (g)')),
-                        DropdownMenuItem(value: GoldUnit.milligram, child: Text('Milligrams (mg)')),
+                        DropdownMenuItem(value: GoldUnit.gram, child: Text('g (grams)')),
+                        DropdownMenuItem(value: GoldUnit.milligram, child: Text('mg')),
                       ],
                       onChanged: (val) {
                         if (val != null) setState(() => _goldUnit = val);
@@ -351,7 +357,7 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
             ],
 
             if (_currentType == TransactionType.saving && repo.savingGoals.isNotEmpty) ...[
@@ -370,7 +376,7 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
                 ],
                 onChanged: (val) => setState(() => _selectedSavingGoalId = val),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
             ],
 
             // Category Selector
@@ -399,7 +405,7 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
                   if (val != null) setState(() => _selectedCategoryId = val);
                 },
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
             ],
 
             // Date picker row
@@ -436,7 +442,7 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
 
             // Additional Notes
             TextField(
@@ -446,7 +452,7 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
                 prefixIcon: Icon(Icons.note),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // Submit Button
             ElevatedButton(

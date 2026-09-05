@@ -79,89 +79,106 @@ class TransactionTile extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                // Category Icon
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: typeColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(category.icon, color: typeColor, size: 22),
-                ),
-                const SizedBox(width: 14),
-
-                // Title & Category & Date
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        transaction.title,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+          child: Builder(
+            builder: (context) {
+              final isSmall = MediaQuery.of(context).size.width < 360;
+              return Padding(
+                padding: EdgeInsets.symmetric(horizontal: isSmall ? 10 : 16, vertical: isSmall ? 8 : 12),
+                child: Row(
+                  children: [
+                    // Category Icon
+                    Container(
+                      width: isSmall ? 38 : 44,
+                      height: isSmall ? 38 : 44,
+                      decoration: BoxDecoration(
+                        color: typeColor.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      const SizedBox(height: 4),
-                      Row(
+                      child: Icon(category.icon, color: typeColor, size: isSmall ? 18 : 22),
+                    ),
+                    SizedBox(width: isSmall ? 10 : 14),
+
+                    // Title & Category & Date
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: typeColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              transaction.type.displayName,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: typeColor,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
                           Text(
-                            DateFormatter.formatRelative(transaction.date),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                            ),
+                            transaction.title,
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: isSmall ? 14 : 15),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: typeColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  transaction.type.displayName,
+                                  style: TextStyle(
+                                    fontSize: isSmall ? 10 : 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: typeColor,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  DateFormatter.formatRelative(transaction.date),
+                                  style: TextStyle(
+                                    fontSize: isSmall ? 11 : 12,
+                                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (transaction.notes != null && transaction.notes!.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              transaction.notes!,
+                              style: TextStyle(
+                                fontSize: isSmall ? 11 : 12,
+                                fontStyle: FontStyle.italic,
+                                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ],
                       ),
-                      if (transaction.notes != null && transaction.notes!.isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          transaction.notes!,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontStyle: FontStyle.italic,
-                            color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+                    ),
+                    const SizedBox(width: 8),
 
-                // Amount
-                Text(
-                  '${transaction.type.isIncome ? '+' : '-'}${CurrencyFormatter.format(transaction.amount, symbol: repo.settings.value.currencySymbol)}',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: transaction.type.isIncome ? AppColors.income : (isDark ? Colors.white : Colors.black87),
-                  ),
+                    // Amount
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: isSmall ? 95 : 125),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          '${transaction.type.isIncome ? '+' : '-'}${CurrencyFormatter.format(transaction.amount, symbol: repo.settings.value.currencySymbol)}',
+                          style: TextStyle(
+                            fontSize: isSmall ? 14 : 15,
+                            fontWeight: FontWeight.bold,
+                            color: transaction.type.isIncome ? AppColors.income : (isDark ? Colors.white : Colors.black87),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),

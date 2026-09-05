@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import 'package:finance_tracker/core/constants/app_colors.dart';
 import 'package:finance_tracker/core/utils/currency_formatter.dart';
 import 'package:finance_tracker/core/utils/date_formatter.dart';
+import 'package:finance_tracker/core/utils/responsive_utils.dart';
 import 'package:finance_tracker/data/models/category_model.dart';
 import 'package:finance_tracker/data/models/recurring_model.dart';
 import 'package:finance_tracker/data/models/transaction_model.dart';
@@ -36,93 +37,103 @@ class RecurringView extends StatelessWidget {
 
           return AlertDialog(
             title: const Text('New Recurring Rule'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SegmentedButton<TransactionType>(
-                    segments: const [
-                      ButtonSegment(value: TransactionType.income, label: Text('Income')),
-                      ButtonSegment(value: TransactionType.expense, label: Text('Expense')),
-                    ],
-                    selected: {ruleType},
-                    onSelectionChanged: (val) {
-                      setState(() {
-                        ruleType = val.first;
-                        selectedCat = ruleType == TransactionType.income ? 'salary' : 'rent';
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: titleController,
-                    decoration: InputDecoration(
-                      labelText: 'Rule Title',
-                      hintText: ruleType == TransactionType.income
-                          ? 'e.g. Monthly Salary'
-                          : 'e.g. House Rent, WiFi, Netflix',
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SegmentedButton<TransactionType>(
+                      segments: const [
+                        ButtonSegment(value: TransactionType.income, label: Text('Income')),
+                        ButtonSegment(value: TransactionType.expense, label: Text('Expense')),
+                      ],
+                      selected: {ruleType},
+                      onSelectionChanged: (val) {
+                        setState(() {
+                          ruleType = val.first;
+                          selectedCat = ruleType == TransactionType.income ? 'salary' : 'rent';
+                        });
+                      },
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: amountController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: InputDecoration(
-                      prefixText: '${repo.settings.value.currencySymbol} ',
-                      labelText: 'Recurring Amount',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<RecurringFrequency>(
-                    value: frequency,
-                    decoration: const InputDecoration(labelText: 'Frequency'),
-                    items: RecurringFrequency.values
-                        .map((f) => DropdownMenuItem(value: f, child: Text(f.label)))
-                        .toList(),
-                    onChanged: (val) {
-                      if (val != null) setState(() => frequency = val);
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: categories.any((c) => c.id == selectedCat) ? selectedCat : categories.first.id,
-                    decoration: const InputDecoration(labelText: 'Category'),
-                    items: categories.map((c) {
-                      return DropdownMenuItem(
-                        value: c.id,
-                        child: Row(
-                          children: [
-                            Icon(c.icon, color: c.color, size: 18),
-                            const SizedBox(width: 8),
-                            Text(c.name),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) setState(() => selectedCat = val);
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  InkWell(
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: startDate,
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime(2035),
-                      );
-                      if (picked != null) setState(() => startDate = picked);
-                    },
-                    child: InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'Effective Start Date',
-                        prefixIcon: Icon(Icons.calendar_today, size: 20),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: titleController,
+                      decoration: InputDecoration(
+                        labelText: 'Rule Title',
+                        hintText: ruleType == TransactionType.income
+                            ? 'e.g. Monthly Salary'
+                            : 'e.g. House Rent, WiFi, Netflix',
                       ),
-                      child: Text(DateFormatter.formatShort(startDate)),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: amountController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: InputDecoration(
+                        prefixText: '${repo.settings.value.currencySymbol} ',
+                        labelText: 'Recurring Amount',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<RecurringFrequency>(
+                      isExpanded: true,
+                      value: frequency,
+                      decoration: const InputDecoration(labelText: 'Frequency'),
+                      items: RecurringFrequency.values
+                          .map((f) => DropdownMenuItem(value: f, child: Text(f.label,overflow: TextOverflow.ellipsis,)))
+                          .toList(),
+                      onChanged: (val) {
+                        if (val != null) setState(() => frequency = val);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      isExpanded: true,
+                      value: categories.any((c) => c.id == selectedCat) ? selectedCat : categories.first.id,
+                      decoration: const InputDecoration(labelText: 'Category'),
+                      items: categories.map((c) {
+                        return DropdownMenuItem(
+                          value: c.id,
+                          child: Row(
+                            children: [
+                              Icon(c.icon, color: c.color, size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  c.name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setState(() => selectedCat = val);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: startDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2035),
+                        );
+                        if (picked != null) setState(() => startDate = picked);
+                      },
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Effective Start Date',
+                          prefixIcon: Icon(Icons.calendar_today, size: 20),
+                        ),
+                        child: Text(DateFormatter.formatShort(startDate)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             actions: [
@@ -216,25 +227,26 @@ class RecurringView extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 900),
             child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: context.pagePadding,
               itemCount: rules.length,
               itemBuilder: (context, index) {
                 final rule = rules[index];
                 final category = repo.getCategoryById(rule.categoryId);
                 final isIncome = rule.type == TransactionType.income;
                 final color = isIncome ? AppColors.income : AppColors.expense;
+                final isSmall = context.isMobileSmall;
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    contentPadding: EdgeInsets.symmetric(horizontal: isSmall ? 10 : 16, vertical: 6),
                     leading: Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: color.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(category.icon, color: color, size: 22),
+                      child: Icon(category.icon, color: color, size: 20),
                     ),
                     title: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -242,12 +254,18 @@ class RecurringView extends StatelessWidget {
                         Expanded(
                           child: Text(
                             rule.title,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: isSmall ? 14 : 15),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        Text(
-                          '${isIncome ? '+' : '-'}${CurrencyFormatter.format(rule.amount)}',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 15),
+                        const SizedBox(width: 8),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '${isIncome ? '+' : '-'}${CurrencyFormatter.format(rule.amount)}',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: isSmall ? 14 : 15),
+                          ),
                         ),
                       ],
                     ),
@@ -257,11 +275,15 @@ class RecurringView extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           '${rule.frequency.label} • Category: ${category.name}',
-                          style: const TextStyle(fontSize: 12),
+                          style: TextStyle(fontSize: isSmall ? 11 : 12),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           'Started: ${DateFormatter.formatShort(rule.startDate)} ${rule.lastGeneratedDate != null ? '• Last run: ${DateFormatter.formatShort(rule.lastGeneratedDate!)}' : ''}',
-                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                          style: TextStyle(fontSize: isSmall ? 10 : 11, color: Colors.grey),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -280,6 +302,7 @@ class RecurringView extends StatelessWidget {
         );
       }),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'fab_recurring',
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         tooltip: 'Add Rule',

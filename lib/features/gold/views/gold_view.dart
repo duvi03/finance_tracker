@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:finance_tracker/core/constants/app_colors.dart';
 import 'package:finance_tracker/core/utils/currency_formatter.dart';
 import 'package:finance_tracker/core/utils/date_formatter.dart';
+import 'package:finance_tracker/core/utils/responsive_utils.dart';
 import 'package:finance_tracker/data/models/gold_model.dart';
 import 'package:finance_tracker/data/repositories/finance_repository.dart';
 
@@ -157,11 +158,11 @@ class GoldView extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 900),
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: context.pagePadding,
               children: [
                 // Gold Portfolio Card
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(context.isMobileSmall ? 14 : 20),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: isDark
@@ -185,16 +186,21 @@ class GoldView extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Total Accumulated Gold',
-                            style: TextStyle(
-                              color: Colors.black87,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
+                          const Expanded(
+                            child: Text(
+                              'Total Accumulated Gold',
+                              style: TextStyle(
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: Colors.black12,
                               borderRadius: BorderRadius.circular(12),
@@ -204,49 +210,66 @@ class GoldView extends StatelessWidget {
                               style: const TextStyle(
                                 color: Colors.black87,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                                fontSize: 11,
                               ),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        '${totalGrams.toStringAsFixed(3)} grams',
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.5,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '${totalGrams.toStringAsFixed(3)} grams',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: context.isMobileSmall ? 26 : 32,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 12),
                       const Divider(color: Colors.black12, height: 1),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 12),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Total Invested', style: TextStyle(color: Colors.black54, fontSize: 11)),
-                              const SizedBox(height: 2),
-                              Text(
-                                CurrencyFormatter.format(totalInvested),
-                                style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 15),
-                              ),
-                            ],
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Total Invested', style: TextStyle(color: Colors.black54, fontSize: 11)),
+                                const SizedBox(height: 2),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    CurrencyFormatter.format(totalInvested),
+                                    style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 15),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              const Text('Average Rate / Gram', style: TextStyle(color: Colors.black54, fontSize: 11)),
-                              const SizedBox(height: 2),
-                              Text(
-                                '${CurrencyFormatter.format(avgRate)} / g',
-                                style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 15),
-                              ),
-                            ],
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                const Text('Avg Rate / g', style: TextStyle(color: Colors.black54, fontSize: 11)),
+                                const SizedBox(height: 2),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerRight,
+                                  child: Text(
+                                    '${CurrencyFormatter.format(avgRate)}/g',
+                                    style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 15),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -309,27 +332,37 @@ class GoldView extends StatelessWidget {
                   )
                 else
                   ...investments.reversed.map((inv) {
+                    final isSmall = context.isMobileSmall;
                     return Card(
                       margin: const EdgeInsets.only(bottom: 10),
                       child: ListTile(
+                        contentPadding: EdgeInsets.symmetric(horizontal: isSmall ? 10 : 16, vertical: 4),
                         leading: Container(
-                          padding: const EdgeInsets.all(10),
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: AppColors.gold.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.monetization_on, color: AppColors.gold, size: 22),
+                          child: const Icon(Icons.monetization_on, color: AppColors.gold, size: 20),
                         ),
                         title: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              '${inv.quantityInGrams.toStringAsFixed(3)} g Gold',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            Expanded(
+                              child: Text(
+                                '${inv.quantityInGrams.toStringAsFixed(3)} g Gold',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: isSmall ? 14 : 15),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            Text(
-                              CurrencyFormatter.format(inv.amountInr),
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            const SizedBox(width: 8),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                CurrencyFormatter.format(inv.amountInr),
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: isSmall ? 14 : 15),
+                              ),
                             ),
                           ],
                         ),
@@ -338,14 +371,18 @@ class GoldView extends StatelessWidget {
                           children: [
                             const SizedBox(height: 4),
                             Text(
-                              'Rate: ${CurrencyFormatter.format(inv.ratePerGram)} / gram • ${DateFormatter.formatShort(inv.purchaseDate)}',
-                              style: const TextStyle(fontSize: 12),
+                              'Rate: ${CurrencyFormatter.format(inv.ratePerGram)}/g • ${DateFormatter.formatShort(inv.purchaseDate)}',
+                              style: TextStyle(fontSize: isSmall ? 11 : 12),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             if (inv.notes != null && inv.notes!.isNotEmpty) ...[
                               const SizedBox(height: 2),
                               Text(
                                 inv.notes!,
                                 style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ],
@@ -365,6 +402,7 @@ class GoldView extends StatelessWidget {
         );
       }),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'fab_gold',
         backgroundColor: AppColors.gold,
         foregroundColor: Colors.black87,
         tooltip: 'Add Gold Entry',

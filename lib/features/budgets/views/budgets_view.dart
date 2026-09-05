@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:finance_tracker/core/constants/app_colors.dart';
 import 'package:finance_tracker/core/utils/currency_formatter.dart';
+import 'package:finance_tracker/core/utils/responsive_utils.dart';
 import 'package:finance_tracker/data/models/category_model.dart';
 import 'package:finance_tracker/data/repositories/finance_repository.dart';
 
@@ -23,40 +24,42 @@ class BudgetsView extends StatelessWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: const Text('Set Monthly Budget'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                value: selectedCat,
-                decoration: const InputDecoration(labelText: 'Category'),
-                items: repo.categories
-                    .where((c) => c.type == CategoryType.expense || c.type == CategoryType.both)
-                    .map((cat) => DropdownMenuItem(
-                          value: cat.id,
-                          child: Row(
-                            children: [
-                              Icon(cat.icon, color: cat.color, size: 18),
-                              const SizedBox(width: 8),
-                              Text(cat.name),
-                            ],
-                          ),
-                        ))
-                    .toList(),
-                onChanged: (val) {
-                  if (val != null) setState(() => selectedCat = val);
-                },
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: limitController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  prefixText: '${repo.settings.value.currencySymbol} ',
-                  labelText: 'Monthly Spending Limit',
-                  hintText: 'e.g. 5000',
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: selectedCat,
+                  decoration: const InputDecoration(labelText: 'Category'),
+                  items: repo.categories
+                      .where((c) => c.type == CategoryType.expense || c.type == CategoryType.both)
+                      .map((cat) => DropdownMenuItem(
+                            value: cat.id,
+                            child: Row(
+                              children: [
+                                Icon(cat.icon, color: cat.color, size: 18),
+                                const SizedBox(width: 8),
+                                Text(cat.name),
+                              ],
+                            ),
+                          ))
+                      .toList(),
+                  onChanged: (val) {
+                    if (val != null) setState(() => selectedCat = val);
+                  },
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                TextField(
+                  controller: limitController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    prefixText: '${repo.settings.value.currencySymbol} ',
+                    labelText: 'Monthly Spending Limit',
+                    hintText: 'e.g. 5000',
+                  ),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
@@ -114,11 +117,11 @@ class BudgetsView extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 900),
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: context.pagePadding,
               children: [
                 // Overview card
                 Container(
-                  padding: const EdgeInsets.all(18),
+                  padding: EdgeInsets.all(context.isMobileSmall ? 12 : 18),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withOpacity(0.08),
                     border: Border.all(color: AppColors.primary.withOpacity(0.2)),
@@ -127,17 +130,24 @@ class BudgetsView extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Total Budgeted vs Spent', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${CurrencyFormatter.format(totalSpentOnBudgeted)} / ${CurrencyFormatter.format(totalBudget)}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-                          ),
-                        ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Total Budgeted vs Spent', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 4),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                '${CurrencyFormatter.format(totalSpentOnBudgeted)} / ${CurrencyFormatter.format(totalBudget)}',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: context.isMobileSmall ? 17 : 20),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         totalBudget > 0
                             ? '${(totalSpentOnBudgeted / totalBudget * 100).toStringAsFixed(0)}% used'
@@ -155,8 +165,24 @@ class BudgetsView extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Active Category Budgets', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+                    Expanded(
+                      child: Text(
+                        'Active Category Budgets',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: context.isMobileSmall ? 15 : 17,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     TextButton.icon(
+                      style: TextButton.styleFrom(
+                        padding: context.isMobileSmall ? const EdgeInsets.symmetric(horizontal: 4) : null,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                       icon: const Icon(Icons.add, size: 16),
                       label: const Text('Add Budget'),
                       onPressed: () => _showSetBudgetDialog(context),
@@ -207,27 +233,35 @@ class BudgetsView extends StatelessWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: category.color.withOpacity(0.12),
-                                        borderRadius: BorderRadius.circular(10),
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: category.color.withOpacity(0.12),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Icon(category.icon, color: category.color, size: 20),
                                       ),
-                                      child: Icon(category.icon, color: category.color, size: 20),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      category.name,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                    ),
-                                  ],
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          category.name,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                                 Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
                                       icon: const Icon(Icons.edit, size: 18),
+                                      visualDensity: VisualDensity.compact,
                                       onPressed: () => _showSetBudgetDialog(
                                         context,
                                         categoryId: b.categoryId,
@@ -236,6 +270,7 @@ class BudgetsView extends StatelessWidget {
                                     ),
                                     IconButton(
                                       icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
+                                      visualDensity: VisualDensity.compact,
                                       onPressed: () => repo.deleteBudget(b.id),
                                     ),
                                   ],
@@ -246,10 +281,17 @@ class BudgetsView extends StatelessWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  'Spent: ${CurrencyFormatter.format(spent)} of ${CurrencyFormatter.format(limit)}',
-                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                Expanded(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      'Spent: ${CurrencyFormatter.format(spent)} of ${CurrencyFormatter.format(limit)}',
+                                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                    ),
+                                  ),
                                 ),
+                                const SizedBox(width: 8),
                                 Text(
                                   '${(ratio * 100).toInt()}%',
                                   style: TextStyle(fontWeight: FontWeight.bold, color: statusColor),
@@ -290,6 +332,7 @@ class BudgetsView extends StatelessWidget {
         );
       }),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'fab_budgets',
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         tooltip: 'Add Budget',

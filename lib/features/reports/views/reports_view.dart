@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:finance_tracker/core/constants/app_colors.dart';
 import 'package:finance_tracker/core/utils/currency_formatter.dart';
 import 'package:finance_tracker/core/utils/date_formatter.dart';
+import 'package:finance_tracker/core/utils/responsive_utils.dart';
 import 'package:finance_tracker/data/models/transaction_model.dart';
 import 'package:finance_tracker/data/repositories/finance_repository.dart';
 
@@ -106,7 +107,7 @@ class _ReportsViewState extends State<ReportsView> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 900),
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: context.pagePadding,
               children: [
                 // Top Net Wealth Summary
                 Card(
@@ -123,10 +124,14 @@ class _ReportsViewState extends State<ReportsView> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Available Cash Balance'),
-                            Text(
-                              CurrencyFormatter.format(repo.allTimeAvailableBalance),
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            const Expanded(child: Text('Available Cash Balance')),
+                            const SizedBox(width: 8),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                CurrencyFormatter.format(repo.allTimeAvailableBalance),
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
                             ),
                           ],
                         ),
@@ -134,10 +139,14 @@ class _ReportsViewState extends State<ReportsView> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Accumulated Savings Goals'),
-                            Text(
-                              CurrencyFormatter.format(repo.totalSavingsAccumulated),
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.savings),
+                            const Expanded(child: Text('Accumulated Savings Goals')),
+                            const SizedBox(width: 8),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                CurrencyFormatter.format(repo.totalSavingsAccumulated),
+                                style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.savings),
+                              ),
                             ),
                           ],
                         ),
@@ -145,10 +154,14 @@ class _ReportsViewState extends State<ReportsView> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Physical & Digital Gold (${repo.totalGoldGrams.toStringAsFixed(2)}g)'),
-                            Text(
-                              CurrencyFormatter.format(repo.totalGoldInvestedInr),
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.gold),
+                            Expanded(child: Text('Physical & Digital Gold (${repo.totalGoldGrams.toStringAsFixed(2)}g)', maxLines: 1, overflow: TextOverflow.ellipsis)),
+                            const SizedBox(width: 8),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                CurrencyFormatter.format(repo.totalGoldInvestedInr),
+                                style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.gold),
+                              ),
                             ),
                           ],
                         ),
@@ -156,16 +169,24 @@ class _ReportsViewState extends State<ReportsView> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Estimated Total Net Worth',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            const Expanded(
+                              child: Text(
+                                'Estimated Total Net Worth',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            Text(
-                              CurrencyFormatter.format(repo.totalNetWorth),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                color: AppColors.primary,
+                            const SizedBox(width: 8),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                CurrencyFormatter.format(repo.totalNetWorth),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                  color: AppColors.primary,
+                                ),
                               ),
                             ),
                           ],
@@ -183,14 +204,18 @@ class _ReportsViewState extends State<ReportsView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
+                          runSpacing: 6,
                           children: [
                             const Text(
                               'Income vs Outflow',
                               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                             ),
                             Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Container(width: 10, height: 10, color: AppColors.income),
                                 const SizedBox(width: 4),
@@ -306,22 +331,29 @@ class _ReportsViewState extends State<ReportsView> {
                         const Text('Gold Accumulation Analytics', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                         const SizedBox(height: 14),
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            _MiniReportStat(
-                              label: 'Total Weight',
-                              value: '${repo.totalGoldGrams.toStringAsFixed(2)} g',
-                              color: AppColors.gold,
+                            Expanded(
+                              child: _MiniReportStat(
+                                label: 'Total Weight',
+                                value: '${repo.totalGoldGrams.toStringAsFixed(2)} g',
+                                color: AppColors.gold,
+                              ),
                             ),
-                            _MiniReportStat(
-                              label: 'Total Invested',
-                              value: CurrencyFormatter.format(repo.totalGoldInvestedInr),
-                              color: AppColors.gold,
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: _MiniReportStat(
+                                label: 'Total Invested',
+                                value: CurrencyFormatter.format(repo.totalGoldInvestedInr),
+                                color: AppColors.gold,
+                              ),
                             ),
-                            _MiniReportStat(
-                              label: 'Avg Rate / g',
-                              value: CurrencyFormatter.format(repo.averageGoldRatePerGram),
-                              color: AppColors.gold,
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: _MiniReportStat(
+                                label: 'Avg Rate / g',
+                                value: CurrencyFormatter.format(repo.averageGoldRatePerGram),
+                                color: AppColors.gold,
+                              ),
                             ),
                           ],
                         ),
@@ -355,9 +387,13 @@ class _MiniReportStat extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey), maxLines: 1, overflow: TextOverflow.ellipsis),
         const SizedBox(height: 4),
-        Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: color)),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: color)),
+        ),
       ],
     );
   }

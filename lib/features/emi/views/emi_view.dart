@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import 'package:finance_tracker/core/constants/app_colors.dart';
 import 'package:finance_tracker/core/utils/currency_formatter.dart';
 import 'package:finance_tracker/core/utils/date_formatter.dart';
+import 'package:finance_tracker/core/utils/responsive_utils.dart';
 import 'package:finance_tracker/data/models/emi_model.dart';
 import 'package:finance_tracker/data/repositories/finance_repository.dart';
 
@@ -166,11 +167,11 @@ class EMIView extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 900),
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: context.pagePadding,
               children: [
                 // Top Liability Overview
                 Container(
-                  padding: const EdgeInsets.all(18),
+                  padding: EdgeInsets.all(context.isMobileSmall ? 12 : 18),
                   decoration: BoxDecoration(
                     color: AppColors.emi.withOpacity(0.1),
                     border: Border.all(color: AppColors.emi.withOpacity(0.3)),
@@ -179,29 +180,38 @@ class EMIView extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Total Outstanding Liability',
-                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.emi),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            CurrencyFormatter.format(totalRemainingLiability),
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
-                          ),
-                        ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Total Outstanding Liability',
+                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.emi),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                CurrencyFormatter.format(totalRemainingLiability),
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: context.isMobileSmall ? 20 : 24),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
                           color: AppColors.emi,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          '${plans.length} Active Plan${plans.length > 1 ? 's' : ''}',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                          '${plans.length} Active',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
                         ),
                       ),
                     ],
@@ -273,18 +283,24 @@ class EMIView extends StatelessWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  'Remaining: ${CurrencyFormatter.format(plan.remainingAmount)}',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                                Expanded(
+                                  child: Text(
+                                    'Remaining: ${CurrencyFormatter.format(plan.remainingAmount)}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                if (nextDate != null)
+                                if (nextDate != null) ...[
+                                  const SizedBox(width: 8),
                                   Text(
                                     'Next: ${DateFormatter.formatShort(nextDate)}',
                                     style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.emi),
                                   ),
+                                ],
                               ],
                             ),
                           ],
@@ -325,28 +341,35 @@ class EMIView extends StatelessWidget {
                             ),
                           ),
                           ...plan.payments.map((payment) {
+                            final isSmall = context.isMobileSmall;
                             return ListTile(
                               dense: true,
+                              contentPadding: EdgeInsets.symmetric(horizontal: isSmall ? 10 : 16),
                               leading: Icon(
                                 payment.isPaid ? Icons.check_circle : Icons.radio_button_unchecked,
                                 color: payment.isPaid ? AppColors.success : AppColors.emi,
-                                size: 20,
+                                size: 18,
                               ),
                               title: Text(
                                 'Installment ${payment.installmentNumber} of ${plan.numberOfInstallments}',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
+                                  fontSize: isSmall ? 12 : 13,
                                   decoration: payment.isPaid ? TextDecoration.lineThrough : null,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               subtitle: Text(
-                                'Due ${DateFormatter.formatShort(payment.dueDate)} ${payment.paidDate != null ? '• Paid on ${DateFormatter.formatShort(payment.paidDate!)}' : ''}',
+                                'Due ${DateFormatter.formatShort(payment.dueDate)} ${payment.paidDate != null ? '• Paid ${DateFormatter.formatShort(payment.paidDate!)}' : ''}',
                                 style: const TextStyle(fontSize: 11),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               trailing: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: payment.isPaid ? Colors.grey : AppColors.emi,
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  backgroundColor: payment.isPaid ? Colors.green : AppColors.emi,
+                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical:payment.isPaid ? 6 : 12),
                                   minimumSize: Size.zero,
                                 ),
                                 onPressed: () async {
@@ -357,7 +380,7 @@ class EMIView extends StatelessWidget {
                                 },
                                 child: Text(
                                   payment.isPaid ? 'Paid ✓' : 'Mark Paid',
-                                  style: const TextStyle(fontSize: 11, color: Colors.white),
+                                  style: const TextStyle(fontSize: 12, color: Colors.white),
                                 ),
                               ),
                             );
@@ -375,6 +398,7 @@ class EMIView extends StatelessWidget {
         );
       }),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab_emi',
         backgroundColor: AppColors.emi,
         foregroundColor: Colors.white,
         onPressed: () => _showNewEmiDialog(context),

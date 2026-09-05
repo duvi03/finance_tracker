@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:finance_tracker/core/constants/app_colors.dart';
 import 'package:finance_tracker/core/constants/app_constants.dart';
+import 'package:finance_tracker/core/utils/responsive_utils.dart';
 import 'package:finance_tracker/data/models/category_model.dart';
 import 'package:finance_tracker/data/repositories/finance_repository.dart';
 
@@ -74,9 +75,12 @@ class SettingsView extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('JSON Data Backup'),
-        content: SizedBox(
-          width: 500,
-          height: 350,
+        content: Container(
+          constraints: BoxConstraints(
+            maxWidth: 500,
+            maxHeight: MediaQuery.of(context).size.height * 0.55,
+          ),
+          width: double.maxFinite,
           child: Column(
             children: [
               const Text(
@@ -118,24 +122,26 @@ class SettingsView extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Restore Data from JSON'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Paste your previously exported Artha JSON backup below. This will merge and restore your data.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: importController,
-              maxLines: 8,
-              decoration: const InputDecoration(
-                hintText: 'Paste JSON content here...',
-                border: OutlineInputBorder(),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Paste your previously exported Artha JSON backup below. This will merge and restore your data.',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
-            ),
-          ],
+              const SizedBox(height: 10),
+              TextField(
+                controller: importController,
+                maxLines: 8,
+                decoration: const InputDecoration(
+                  hintText: 'Paste JSON content here...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
@@ -208,7 +214,7 @@ class SettingsView extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 800),
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: context.pagePadding,
               children: [
                 // Warning Notice Card
                 Container(
@@ -256,10 +262,11 @@ class SettingsView extends StatelessWidget {
                         trailing: DropdownButton<ThemeMode>(
                           value: settings.themeMode,
                           underline: const SizedBox(),
+                          isDense: true,
                           items: const [
-                            DropdownMenuItem(value: ThemeMode.system, child: Text('System Default')),
-                            DropdownMenuItem(value: ThemeMode.light, child: Text('Light Mode')),
-                            DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark Mode')),
+                            DropdownMenuItem(value: ThemeMode.system, child: Text('System')),
+                            DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
+                            DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
                           ],
                           onChanged: (mode) {
                             if (mode != null) {
@@ -286,12 +293,13 @@ class SettingsView extends StatelessWidget {
                         trailing: DropdownButton<String>(
                           value: settings.currencySymbol,
                           underline: const SizedBox(),
+                          isDense: true,
                           items: const [
-                            DropdownMenuItem(value: '₹', child: Text('₹ (INR - Indian Rupee)')),
-                            DropdownMenuItem(value: '\$', child: Text('\$ (USD - Dollar)')),
-                            DropdownMenuItem(value: '€', child: Text('€ (EUR - Euro)')),
-                            DropdownMenuItem(value: '£', child: Text('£ (GBP - Pound)')),
-                            DropdownMenuItem(value: 'AED', child: Text('AED (Dirham)')),
+                            DropdownMenuItem(value: '₹', child: Text('₹ (INR)')),
+                            DropdownMenuItem(value: '\$', child: Text('\$ (USD)')),
+                            DropdownMenuItem(value: '€', child: Text('€ (EUR)')),
+                            DropdownMenuItem(value: '£', child: Text('£ (GBP)')),
+                            DropdownMenuItem(value: 'AED', child: Text('AED')),
                           ],
                           onChanged: (sym) {
                             if (sym != null) {

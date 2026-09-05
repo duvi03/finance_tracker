@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:finance_tracker/core/constants/app_colors.dart';
+import 'package:finance_tracker/core/utils/responsive_utils.dart';
 import 'package:finance_tracker/core/widgets/quick_add_dialog.dart';
 import 'package:finance_tracker/features/budgets/views/budgets_view.dart';
 import 'package:finance_tracker/features/dashboard/views/dashboard_view.dart';
@@ -65,15 +66,16 @@ class MainShellView extends StatelessWidget {
                 Container(
                   width: 240,
                   decoration: BoxDecoration(
-                    color: isDark ? AppColors.darkSurface : Colors.white,
                     border: Border(
                       right: BorderSide(
                         color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
                       ),
                     ),
                   ),
-                  child: Column(
-                    children: [
+                  child: Material(
+                    color: isDark ? AppColors.darkSurface : Colors.white,
+                    child: Column(
+                      children: [
                       // Header / Brand
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -202,6 +204,7 @@ class MainShellView extends StatelessWidget {
                     ],
                   ),
                 ),
+              ),
 
                 // Main Body for Selected Screen
                 Expanded(
@@ -238,6 +241,7 @@ class MainShellView extends StatelessWidget {
         // --- Mobile Bottom Navigation View (< 800px) ---
         return Obx(() {
           final tab = controller.currentMobileTab.value;
+          final isSmall = constraints.maxWidth < 360;
           return Scaffold(
             body: IndexedStack(
               index: tab,
@@ -252,28 +256,32 @@ class MainShellView extends StatelessWidget {
             bottomNavigationBar: BottomNavigationBar(
               currentIndex: tab,
               onTap: controller.changeTab,
-              items: const [
-                BottomNavigationBarItem(
+              selectedFontSize: isSmall ? 10 : 12,
+              unselectedFontSize: isSmall ? 9 : 11,
+              iconSize: isSmall ? 20 : 22,
+              type: BottomNavigationBarType.fixed,
+              items: [
+                const BottomNavigationBarItem(
                   icon: Icon(Icons.dashboard_outlined),
                   activeIcon: Icon(Icons.dashboard),
                   label: 'Dashboard',
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.receipt_long_outlined),
-                  activeIcon: Icon(Icons.receipt_long),
-                  label: 'Transactions',
+                  icon: const Icon(Icons.receipt_long_outlined),
+                  activeIcon: const Icon(Icons.receipt_long),
+                  label: isSmall ? 'Txns' : 'Transactions',
                 ),
-                BottomNavigationBarItem(
+                const BottomNavigationBarItem(
                   icon: Icon(Icons.credit_card_outlined),
                   activeIcon: Icon(Icons.credit_card),
                   label: 'EMIs',
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.savings_outlined),
-                  activeIcon: Icon(Icons.savings),
-                  label: 'Investments',
+                  icon: const Icon(Icons.savings_outlined),
+                  activeIcon: const Icon(Icons.savings),
+                  label: isSmall ? 'Invest' : 'Investments',
                 ),
-                BottomNavigationBarItem(
+                const BottomNavigationBarItem(
                   icon: Icon(Icons.menu),
                   activeIcon: Icon(Icons.menu_open),
                   label: 'More',
@@ -304,29 +312,30 @@ class _SidebarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 2),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Material(
         color: isSelected ? AppColors.primary.withOpacity(0.12) : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
-      ),
-      child: ListTile(
-        dense: true,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        leading: Icon(
-          isSelected ? selectedIcon : icon,
-          color: isSelected ? AppColors.primary : null,
-          size: 20,
-        ),
-        title: Text(
-          label,
-          style: TextStyle(
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          dense: true,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          leading: Icon(
+            isSelected ? selectedIcon : icon,
             color: isSelected ? AppColors.primary : null,
-            fontSize: 13,
+            size: 20,
           ),
+          title: Text(
+            label,
+            style: TextStyle(
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              color: isSelected ? AppColors.primary : null,
+              fontSize: 13,
+            ),
+          ),
+          onTap: onTap,
         ),
-        onTap: onTap,
       ),
     );
   }
@@ -357,16 +366,17 @@ class _InvestmentsCombinedTabState extends State<_InvestmentsCombinedTab> with S
 
   @override
   Widget build(BuildContext context) {
+    final isSmall = context.isMobileSmall;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Investments & Savings', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(isSmall ? 'Investments' : 'Investments & Savings', style: const TextStyle(fontWeight: FontWeight.bold)),
         bottom: TabBar(
           controller: _tabController,
           labelColor: AppColors.primary,
           indicatorColor: AppColors.primary,
-          tabs: const [
-            Tab(icon: Icon(Icons.savings, size: 20), text: 'Savings Goals'),
-            Tab(icon: Icon(Icons.monetization_on, size: 20), text: 'Gold Tracker'),
+          tabs: [
+            Tab(icon: const Icon(Icons.savings, size: 20), text: isSmall ? 'Savings' : 'Savings Goals'),
+            Tab(icon: const Icon(Icons.monetization_on, size: 20), text: isSmall ? 'Gold' : 'Gold Tracker'),
           ],
         ),
       ),
@@ -392,7 +402,7 @@ class _MoreCombinedTab extends StatelessWidget {
         title: const Text('More Features', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: context.pagePadding,
         children: [
           _MoreMenuCard(
             title: 'Monthly Budgets',

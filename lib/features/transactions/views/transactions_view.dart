@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:finance_tracker/core/constants/app_colors.dart';
 import 'package:finance_tracker/core/utils/currency_formatter.dart';
+import 'package:finance_tracker/core/utils/responsive_utils.dart';
 import 'package:finance_tracker/core/widgets/quick_add_dialog.dart';
 import 'package:finance_tracker/core/widgets/transaction_tile.dart';
 import 'package:finance_tracker/data/models/transaction_model.dart';
@@ -50,9 +51,12 @@ class _TransactionsViewState extends State<TransactionsView> {
                 context: context,
                 builder: (ctx) => AlertDialog(
                   title: const Text('Exported CSV Preview'),
-                  content: SizedBox(
-                    width: 500,
-                    height: 300,
+                  content: Container(
+                    constraints: BoxConstraints(
+                      maxWidth: 500,
+                      maxHeight: MediaQuery.of(context).size.height * 0.5,
+                    ),
+                    width: double.maxFinite,
                     child: SingleChildScrollView(
                       child: SelectableText(
                         csv,
@@ -179,24 +183,32 @@ class _TransactionsViewState extends State<TransactionsView> {
 
                 // Quick stats summary of filtered list
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: EdgeInsets.symmetric(horizontal: context.isMobileSmall ? 10 : 16, vertical: 4),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Showing ${list.length} transactions',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                          fontWeight: FontWeight.w500,
+                      Expanded(
+                        child: Text(
+                          'Showing ${list.length} transactions',
+                          style: TextStyle(
+                            fontSize: context.isMobileSmall ? 11 : 12,
+                            color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      Text(
-                        'Net: ${CurrencyFormatter.format(totalFiltered)}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: totalFiltered >= 0 ? AppColors.income : AppColors.expense,
+                      const SizedBox(width: 8),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Net: ${CurrencyFormatter.format(totalFiltered)}',
+                          style: TextStyle(
+                            fontSize: context.isMobileSmall ? 12 : 13,
+                            fontWeight: FontWeight.bold,
+                            color: totalFiltered >= 0 ? AppColors.income : AppColors.expense,
+                          ),
                         ),
                       ),
                     ],
@@ -226,7 +238,7 @@ class _TransactionsViewState extends State<TransactionsView> {
                           ),
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: EdgeInsets.symmetric(horizontal: context.isMobileSmall ? 10 : 16, vertical: 8),
                           itemCount: list.length,
                           itemBuilder: (context, index) {
                             final tx = list[index];
@@ -243,6 +255,7 @@ class _TransactionsViewState extends State<TransactionsView> {
         );
       }),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'fab_transactions',
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         tooltip: 'Quick Add',
