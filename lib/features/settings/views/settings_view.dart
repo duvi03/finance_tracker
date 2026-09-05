@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:finance_tracker/core/constants/app_colors.dart';
 import 'package:finance_tracker/core/constants/app_constants.dart';
+import 'package:finance_tracker/core/utils/backup_file_manager.dart';
 import 'package:finance_tracker/core/utils/responsive_utils.dart';
 import 'package:finance_tracker/data/models/category_model.dart';
 import 'package:finance_tracker/data/repositories/finance_repository.dart';
@@ -70,24 +72,113 @@ class SettingsView extends StatelessWidget {
   void _showExportJsonDialog(BuildContext context) {
     final repo = Get.find<FinanceRepository>();
     final jsonBackup = repo.exportJsonBackup();
+    final fileName = BackupFileManager.getBackupFileName();
+    final isSmall = context.isMobileSmall;
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('JSON Data Backup'),
+        title: const Row(
+          children: [
+            Icon(Icons.file_download, color: AppColors.primary),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Export JSON Backup',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
         content: Container(
           constraints: BoxConstraints(
             maxWidth: 500,
-            maxHeight: MediaQuery.of(context).size.height * 0.55,
+            maxHeight: MediaQuery.of(context).size.height * 0.6,
           ),
           width: double.maxFinite,
           child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Copy and save this JSON backup safely. You can paste it back at any time to restore your entire financial records.',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.description, color: AppColors.primary, size: 24),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Backup File Name:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                          const SizedBox(height: 2),
+                          Text(
+                            fileName,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                icon: const Icon(Icons.download, size: 20),
+                label: Text(
+                  'Download $fileName',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: isSmall ? 12 : 13),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onPressed: () async {
+                  final success = await BackupFileManager.downloadBackupJson(jsonBackup);
+                  if (context.mounted) {
+                    Navigator.pop(ctx);
+                  }
+                  if (success) {
+                    Get.snackbar(
+                      'Download Started',
+                      'Backup file saved as $fileName',
+                      backgroundColor: AppColors.success,
+                      colorText: Colors.white,
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.copy, size: 18),
+                label: const Text('Copy JSON to Clipboard'),
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: jsonBackup));
+                  Get.snackbar(
+                    'Copied',
+                    'JSON backup copied to clipboard',
+                    backgroundColor: AppColors.primary,
+                    colorText: Colors.white,
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Raw JSON Preview:',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.all(8),
@@ -117,52 +208,128 @@ class SettingsView extends StatelessWidget {
   void _showImportJsonDialog(BuildContext context) {
     final repo = Get.find<FinanceRepository>();
     final importController = TextEditingController();
+    final isSmall = context.isMobileSmall;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Restore Data from JSON'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Row(
             children: [
-              const Text(
-                'Paste your previously exported Artha JSON backup below. This will merge and restore your data.',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: importController,
-                maxLines: 8,
-                decoration: const InputDecoration(
-                  hintText: 'Paste JSON content here...',
-                  border: OutlineInputBorder(),
+              Icon(Icons.file_upload, color: AppColors.primary),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Restore Data from Backup',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            onPressed: () async {
-              final text = importController.text.trim();
-              if (text.isEmpty) return;
-
-              final success = await repo.restoreJsonBackup(text);
-              Navigator.pop(ctx);
-
-              if (success) {
-                Get.snackbar('Success', 'Data restored successfully!', backgroundColor: AppColors.success, colorText: Colors.white);
-              } else {
-                Get.snackbar('Error', 'Invalid JSON backup format', backgroundColor: AppColors.danger, colorText: Colors.white);
-              }
-            },
-            child: const Text('Restore Backup'),
+          content: Container(
+            constraints: BoxConstraints(
+              maxWidth: 500,
+              maxHeight: MediaQuery.of(context).size.height * 0.6,
+            ),
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Select an Artha backup JSON file or paste its content to restore all records.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary.withOpacity(0.15),
+                      foregroundColor: AppColors.primary,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    icon: const Icon(Icons.file_open, size: 20),
+                    label: Text(
+                      'Choose Backup File (.json)',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: isSmall ? 12 : 14),
+                    ),
+                    onPressed: () async {
+                      final content = await BackupFileManager.pickAndReadBackupJson();
+                      if (content != null && content.isNotEmpty) {
+                        setDialogState(() {
+                          importController.text = content;
+                        });
+                        Get.snackbar(
+                          'File Loaded',
+                          'Backup file loaded into field. Tap Restore to proceed.',
+                          backgroundColor: AppColors.primary,
+                          colorText: Colors.white,
+                        );
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Expanded(child: Divider()),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          'OR PASTE JSON',
+                          style: TextStyle(fontSize: 10, color: Colors.grey.shade600, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: importController,
+                    maxLines: 6,
+                    decoration: const InputDecoration(
+                      hintText: 'Paste Artha JSON backup content here...',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ],
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              onPressed: () async {
+                final text = importController.text.trim();
+                if (text.isEmpty) return;
+
+                final success = await repo.restoreJsonBackup(text);
+                if (context.mounted) {
+                  Navigator.pop(ctx);
+                }
+
+                if (success) {
+                  Get.snackbar(
+                    'Success',
+                    'Data restored successfully!',
+                    backgroundColor: AppColors.success,
+                    colorText: Colors.white,
+                  );
+                } else {
+                  Get.snackbar(
+                    'Error',
+                    'Invalid JSON backup format',
+                    backgroundColor: AppColors.danger,
+                    colorText: Colors.white,
+                  );
+                }
+              },
+              child: const Text('Restore Backup'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -353,7 +520,7 @@ class SettingsView extends StatelessWidget {
                       ListTile(
                         leading: const Icon(Icons.file_download, color: AppColors.primary),
                         title: const Text('Export JSON Backup'),
-                        subtitle: const Text('Backup all transactions, EMIs, gold, and savings to a file'),
+                        subtitle: Text('Download ${BackupFileManager.getBackupFileName()}'),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => _showExportJsonDialog(context),
                       ),
@@ -361,7 +528,7 @@ class SettingsView extends StatelessWidget {
                       ListTile(
                         leading: const Icon(Icons.file_upload, color: AppColors.primary),
                         title: const Text('Restore Data from Backup'),
-                        subtitle: const Text('Restore records from a previously exported JSON backup'),
+                        subtitle: const Text('Choose an Artha backup JSON file or paste JSON'),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => _showImportJsonDialog(context),
                       ),
