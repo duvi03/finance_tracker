@@ -9,12 +9,12 @@ import 'package:finance_tracker/data/repositories/finance_repository.dart';
 class BudgetsView extends StatelessWidget {
   const BudgetsView({super.key});
 
-  void _showSetBudgetDialog(BuildContext context, {String? categoryId, double? currentLimit}) {
+  void _showSetBudgetDialog(BuildContext context, {String? categoryId, num? currentLimit}) {
     final repo = Get.find<FinanceRepository>();
     final now = DateTime.now();
 
     final limitController = TextEditingController(
-      text: currentLimit != null ? currentLimit.toStringAsFixed(0) : '',
+      text: currentLimit != null ? currentLimit.toString() : '',
     );
     String selectedCat = categoryId ??
         repo.categories.firstWhere((c) => c.type == CategoryType.expense).id;
@@ -29,7 +29,7 @@ class BudgetsView extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
-                  value: selectedCat,
+                  initialValue: selectedCat,
                   decoration: const InputDecoration(labelText: 'Category'),
                   items: repo.categories
                       .where((c) => c.type == CategoryType.expense || c.type == CategoryType.both)
@@ -66,7 +66,7 @@ class BudgetsView extends StatelessWidget {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
               onPressed: () async {
-                final limit = double.tryParse(limitController.text.trim()) ?? 0;
+                final limit = num.tryParse(limitController.text.trim()) ?? 0;
                 if (limit <= 0) return;
 
                 await repo.setBudget(
@@ -75,7 +75,7 @@ class BudgetsView extends StatelessWidget {
                   month: now.month,
                   year: now.year,
                 );
-                Navigator.pop(ctx);
+                if (ctx.mounted) Navigator.pop(ctx);
               },
               child: const Text('Save Budget'),
             ),
@@ -108,8 +108,8 @@ class BudgetsView extends StatelessWidget {
             .where((b) => b.month == now.month && b.year == now.year)
             .toList();
 
-        final totalBudget = currentBudgets.fold(0.0, (sum, b) => sum + b.monthlyLimit);
-        final totalSpentOnBudgeted = currentBudgets.fold(0.0, (sum, b) {
+        final totalBudget = currentBudgets.fold<num>(0, (sum, b) => sum + b.monthlyLimit);
+        final totalSpentOnBudgeted = currentBudgets.fold<num>(0, (sum, b) {
           return sum + repo.getCategorySpending(b.categoryId, now.month, now.year);
         });
 
@@ -123,8 +123,8 @@ class BudgetsView extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.all(context.isMobileSmall ? 12 : 18),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.08),
-                    border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
@@ -239,7 +239,7 @@ class BudgetsView extends StatelessWidget {
                                       Container(
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
-                                          color: category.color.withOpacity(0.12),
+                                          color: category.color.withValues(alpha: 0.12),
                                           borderRadius: BorderRadius.circular(10),
                                         ),
                                         child: Icon(category.icon, color: category.color, size: 20),

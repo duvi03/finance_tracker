@@ -29,7 +29,7 @@ extension TransactionTypeExtension on TransactionType {
 class TransactionModel {
   final String id;
   final String title;
-  final double amount;
+  final num amount;
   final DateTime date;
   final TransactionType type;
   final String categoryId;
@@ -52,7 +52,7 @@ class TransactionModel {
   TransactionModel copyWith({
     String? id,
     String? title,
-    double? amount,
+    num? amount,
     DateTime? date,
     TransactionType? type,
     String? categoryId,
@@ -89,7 +89,7 @@ class TransactionModel {
     return TransactionModel(
       id: json['id'] as String,
       title: json['title'] as String,
-      amount: (json['amount'] as num).toDouble(),
+      amount: json['amount'] as num,
       date: DateTime.parse(json['date'] as String),
       type: TransactionType.values.firstWhere(
         (e) => e.name == json['type'],

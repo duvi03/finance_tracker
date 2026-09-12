@@ -11,17 +11,29 @@ import 'package:finance_tracker/data/repositories/finance_repository.dart';
 
 class QuickAddModal extends StatefulWidget {
   final TransactionType initialType;
+  final DateTime? initialDate;
 
-  const QuickAddModal({super.key, this.initialType = TransactionType.expense});
+  const QuickAddModal({
+    super.key,
+    this.initialType = TransactionType.expense,
+    this.initialDate,
+  });
 
-  static Future<void> show(BuildContext context, {TransactionType initialType = TransactionType.expense}) {
+  static Future<void> show(
+    BuildContext context, {
+    TransactionType initialType = TransactionType.expense,
+    DateTime? initialDate,
+  }) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: QuickAddModal(initialType: initialType),
+        child: QuickAddModal(
+          initialType: initialType,
+          initialDate: initialDate,
+        ),
       ),
     );
   }
@@ -51,11 +63,12 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
 
   late TransactionType _currentType;
   late String _selectedCategoryId;
-  DateTime _selectedDate = DateTime.now();
+  late DateTime _selectedDate;
 
   @override
   void initState() {
     super.initState();
+    _selectedDate = widget.initialDate ?? DateTime.now();
     _currentType = widget.initialType;
     final initialIndex = _getTabIndexForType(_currentType);
     _tabController = TabController(length: 5, vsync: this, initialIndex: initialIndex);
@@ -128,7 +141,7 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
   }
 
   Future<void> _submit() async {
-    final amount = double.tryParse(_amountController.text.trim());
+    final amount = num.tryParse(_amountController.text.trim());
     if (amount == null || amount <= 0) {
       Get.snackbar(
         'Invalid Amount',
@@ -172,7 +185,7 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
       );
       await repo.addEmiPlan(plan);
     } else if (_currentType == TransactionType.gold) {
-      final qty = double.tryParse(_goldQuantityController.text.trim());
+      final qty = num.tryParse(_goldQuantityController.text.trim());
       if (qty == null || qty <= 0) {
         Get.snackbar(
           'Invalid Quantity',
@@ -213,6 +226,7 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
       await repo.addTransaction(tx);
     }
 
+    if (!mounted) return;
     Navigator.of(context).pop();
     Get.snackbar(
       'Recorded Successfully',
@@ -344,7 +358,7 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
                   Expanded(
                     flex: 2,
                     child: DropdownButtonFormField<GoldUnit>(
-                      value: _goldUnit,
+                      initialValue: _goldUnit,
                       decoration: const InputDecoration(labelText: 'Unit'),
                       items: const [
                         DropdownMenuItem(value: GoldUnit.gram, child: Text('g (grams)')),
@@ -362,7 +376,7 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
 
             if (_currentType == TransactionType.saving && repo.savingGoals.isNotEmpty) ...[
               DropdownButtonFormField<String?>(
-                value: _selectedSavingGoalId,
+                initialValue: _selectedSavingGoalId,
                 decoration: const InputDecoration(
                   labelText: 'Link to Goal (Optional)',
                   prefixIcon: Icon(Icons.flag),
@@ -382,7 +396,7 @@ class _QuickAddModalState extends State<QuickAddModal> with SingleTickerProvider
             // Category Selector
             if (categoriesForType.isNotEmpty) ...[
               DropdownButtonFormField<String>(
-                value: categoriesForType.any((c) => c.id == _selectedCategoryId)
+                initialValue: categoriesForType.any((c) => c.id == _selectedCategoryId)
                     ? _selectedCategoryId
                     : categoriesForType.first.id,
                 decoration: const InputDecoration(

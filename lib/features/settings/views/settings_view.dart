@@ -30,7 +30,7 @@ class SettingsView extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<CategoryType>(
-                value: type,
+                initialValue: type,
                 decoration: const InputDecoration(labelText: 'Type'),
                 items: const [
                   DropdownMenuItem(value: CategoryType.expense, child: Text('Expense')),
@@ -59,7 +59,7 @@ class SettingsView extends StatelessWidget {
                   isCustom: true,
                 );
                 await repo.addCategory(cat);
-                Navigator.pop(ctx);
+                if (ctx.mounted) Navigator.pop(ctx);
               },
               child: const Text('Add'),
             ),
@@ -104,9 +104,9 @@ class SettingsView extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.08),
+                  color: AppColors.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   children: [
@@ -245,7 +245,7 @@ class SettingsView extends StatelessWidget {
                   const SizedBox(height: 12),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary.withOpacity(0.15),
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.15),
                       foregroundColor: AppColors.primary,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -356,7 +356,7 @@ class SettingsView extends StatelessWidget {
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
             onPressed: () async {
               await repo.resetAllData();
-              Navigator.pop(ctx);
+              if (ctx.mounted) Navigator.pop(ctx);
               Get.snackbar('Data Cleared', 'All application data has been wiped.', backgroundColor: AppColors.danger, colorText: Colors.white);
             },
             child: const Text('Confirm Erase All'),
@@ -387,8 +387,8 @@ class SettingsView extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.12),
-                    border: Border.all(color: Colors.amber.shade700.withOpacity(0.3)),
+                    color: Colors.amber.withValues(alpha: 0.12),
+                    border: Border.all(color: Colors.amber.shade700.withValues(alpha: 0.3)),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Row(

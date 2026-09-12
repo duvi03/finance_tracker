@@ -81,7 +81,7 @@ class EMIView extends StatelessWidget {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.emi),
               onPressed: () async {
-                final total = double.tryParse(amountController.text.trim()) ?? 0;
+                final total = num.tryParse(amountController.text.trim()) ?? 0;
                 final months = int.tryParse(installmentsController.text.trim()) ?? 0;
                 final name = nameController.text.trim();
 
@@ -109,7 +109,7 @@ class EMIView extends StatelessWidget {
                 );
 
                 await repo.addEmiPlan(plan);
-                Navigator.pop(ctx);
+                if (ctx.mounted) Navigator.pop(ctx);
               },
               child: const Text('Create Plan'),
             ),
@@ -161,7 +161,7 @@ class EMIView extends StatelessWidget {
           );
         }
 
-        final totalRemainingLiability = plans.fold(0.0, (sum, p) => sum + p.remainingAmount);
+        final totalRemainingLiability = plans.fold<num>(0, (sum, p) => sum + p.remainingAmount);
 
         return Center(
           child: ConstrainedBox(
@@ -173,8 +173,8 @@ class EMIView extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.all(context.isMobileSmall ? 12 : 18),
                   decoration: BoxDecoration(
-                    color: AppColors.emi.withOpacity(0.1),
-                    border: Border.all(color: AppColors.emi.withOpacity(0.3)),
+                    color: AppColors.emi.withValues(alpha: 0.1),
+                    border: Border.all(color: AppColors.emi.withValues(alpha: 0.3)),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
@@ -234,7 +234,7 @@ class EMIView extends StatelessWidget {
                         leading: Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: AppColors.emi.withOpacity(0.12),
+                            color: AppColors.emi.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(Icons.shopping_bag, color: AppColors.emi, size: 22),
@@ -251,7 +251,7 @@ class EMIView extends StatelessWidget {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: AppColors.success.withOpacity(0.15),
+                                  color: AppColors.success.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: const Text(

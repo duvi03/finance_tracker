@@ -25,7 +25,7 @@ extension RecurringFrequencyExtension on RecurringFrequency {
 class RecurringRuleModel {
   final String id;
   final String title;
-  final double amount;
+  final num amount;
   final TransactionType type; // income or expense
   final RecurringFrequency frequency;
   final DateTime startDate;
@@ -52,7 +52,7 @@ class RecurringRuleModel {
   RecurringRuleModel copyWith({
     String? id,
     String? title,
-    double? amount,
+    num? amount,
     TransactionType? type,
     RecurringFrequency? frequency,
     DateTime? startDate,
@@ -95,7 +95,7 @@ class RecurringRuleModel {
     return RecurringRuleModel(
       id: json['id'] as String,
       title: json['title'] as String,
-      amount: (json['amount'] as num).toDouble(),
+      amount: json['amount'] as num,
       type: TransactionType.values.firstWhere(
         (e) => e.name == json['type'],
         orElse: () => TransactionType.expense,

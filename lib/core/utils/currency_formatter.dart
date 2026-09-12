@@ -6,11 +6,12 @@ class CurrencyFormatter {
 
   /// Formats amount in Indian Rupee style: e.g. 5000 -> ₹5,000, 125000 -> ₹1,25,000
   static String format(
-    double amount, {
+    num amount, {
     String? symbol,
-    bool showDecimals = false,
+    bool? showDecimals,
     bool compact = false,
   }) {
+    final bool actualShowDecimals = showDecimals ?? (amount is double);
     final sym = symbol ?? defaultSymbol;
     final isNegative = amount < 0;
     final absAmount = amount.abs();
@@ -27,18 +28,18 @@ class CurrencyFormatter {
 
     String formattedNumber;
     try {
-      final pattern = showDecimals ? '#,##,##0.00' : '#,##,##0';
+      final pattern = actualShowDecimals ? '#,##,##0.00' : '#,##,##0';
       final formatter = NumberFormat(pattern, 'en_IN');
       formattedNumber = formatter.format(absAmount);
     } catch (_) {
       // Fallback if locale data is unavailable
-      formattedNumber = _formatIndianSystem(absAmount, showDecimals);
+      formattedNumber = _formatIndianSystem(absAmount, actualShowDecimals);
     }
 
     return '${isNegative ? '-' : ''}$sym$formattedNumber';
   }
 
-  static String _formatIndianSystem(double amount, bool showDecimals) {
+  static String _formatIndianSystem(num amount, bool showDecimals) {
     final parts = amount.toStringAsFixed(showDecimals ? 2 : 0).split('.');
     String integerPart = parts[0];
     final decimalPart = parts.length > 1 ? '.${parts[1]}' : '';

@@ -78,7 +78,7 @@ class RecurringView extends StatelessWidget {
                     const SizedBox(height: 12),
                     DropdownButtonFormField<RecurringFrequency>(
                       isExpanded: true,
-                      value: frequency,
+                      initialValue: frequency,
                       decoration: const InputDecoration(labelText: 'Frequency'),
                       items: RecurringFrequency.values
                           .map((f) => DropdownMenuItem(value: f, child: Text(f.label,overflow: TextOverflow.ellipsis,)))
@@ -90,7 +90,7 @@ class RecurringView extends StatelessWidget {
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       isExpanded: true,
-                      value: categories.any((c) => c.id == selectedCat) ? selectedCat : categories.first.id,
+                      initialValue: categories.any((c) => c.id == selectedCat) ? selectedCat : categories.first.id,
                       decoration: const InputDecoration(labelText: 'Category'),
                       items: categories.map((c) {
                         return DropdownMenuItem(
@@ -144,7 +144,7 @@ class RecurringView extends StatelessWidget {
                 ),
                 onPressed: () async {
                   final title = titleController.text.trim();
-                  final amount = double.tryParse(amountController.text.trim()) ?? 0;
+                  final amount = num.tryParse(amountController.text.trim()) ?? 0;
                   if (title.isEmpty || amount <= 0) return;
 
                   final rule = RecurringRuleModel(
@@ -160,7 +160,7 @@ class RecurringView extends StatelessWidget {
                   );
 
                   await repo.addRecurringRule(rule);
-                  Navigator.pop(ctx);
+                  if (ctx.mounted) Navigator.pop(ctx);
                 },
                 child: const Text('Create Rule'),
               ),
@@ -243,7 +243,7 @@ class RecurringView extends StatelessWidget {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.12),
+                        color: color.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(category.icon, color: color, size: 20),
@@ -289,7 +289,7 @@ class RecurringView extends StatelessWidget {
                     ),
                     trailing: Switch(
                       value: rule.isActive,
-                      activeColor: color,
+                      activeThumbColor: color,
                       onChanged: (val) {
                         repo.updateRecurringRule(rule.copyWith(isActive: val));
                       },

@@ -5,6 +5,7 @@ import 'package:finance_tracker/core/utils/currency_formatter.dart';
 import 'package:finance_tracker/core/utils/date_formatter.dart';
 import 'package:finance_tracker/core/utils/responsive_utils.dart';
 import 'package:finance_tracker/core/widgets/metric_summary_card.dart';
+import 'package:finance_tracker/core/widgets/edit_transaction_dialog.dart';
 import 'package:finance_tracker/core/widgets/quick_add_dialog.dart';
 import 'package:finance_tracker/core/widgets/transaction_tile.dart';
 import 'package:finance_tracker/data/models/transaction_model.dart';
@@ -26,7 +27,7 @@ class DashboardView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.15),
+                color: AppColors.primary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(Icons.account_balance_wallet, color: AppColors.primary, size: 22),
@@ -42,7 +43,7 @@ class DashboardView extends StatelessWidget {
           IconButton(
             tooltip: 'Quick Add',
             icon: const Icon(Icons.add_circle, color: AppColors.primary, size: 28),
-            onPressed: () => QuickAddModal.show(context),
+            onPressed: () => QuickAddModal.show(context, initialDate: controller.effectiveDateForNewEntry),
           ),
           const SizedBox(width: 8),
         ],
@@ -54,7 +55,7 @@ class DashboardView extends StatelessWidget {
         final monthEmi = controller.monthEmi;
         final monthSavings = controller.monthSavings;
         final monthGold = controller.monthGold;
-        final monthBalance = controller.monthAvailableBalance;
+        final monthBalance = controller.monthRemainingBalance;
         final netWorth = controller.totalNetWorth;
         final recentTxs = controller.recentTransactions;
         final upcomingEmis = controller.upcomingEmis;
@@ -112,7 +113,7 @@ class DashboardView extends StatelessWidget {
                     ),
                     const SizedBox(height: 14),
 
-                    // --- Primary Available Cash & Net Worth Banner ---
+                    // --- Primary Remaining Cash & Net Worth Banner ---
                     Container(
                       padding: EdgeInsets.all(context.isMobileSmall ? 14 : (context.isMobileNarrow ? 16 : 20)),
                       decoration: BoxDecoration(
@@ -126,7 +127,7 @@ class DashboardView extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withOpacity(0.2),
+                            color: AppColors.primary.withValues(alpha: 0.2),
                             blurRadius: 16,
                             offset: const Offset(0, 6),
                           ),
@@ -140,7 +141,7 @@ class DashboardView extends StatelessWidget {
                             children: [
                               Expanded(
                                 child: Text(
-                                  '${DateFormatter.formatMonthYear(selectedDate)} Remaining',
+                                  '${DateFormatter.formatMonthYear(selectedDate)} Remaining Balance',
                                   style: TextStyle(
                                     color: Colors.white70,
                                     fontSize: context.isMobileSmall ? 12 : 14,
@@ -154,7 +155,7 @@ class DashboardView extends StatelessWidget {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.18),
+                                  color: Colors.white.withValues(alpha: 0.18),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
@@ -184,17 +185,41 @@ class DashboardView extends StatelessWidget {
                           ),
                           const SizedBox(height: 12),
                           const Divider(color: Colors.white24, height: 1),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Balance = Income - (Expenses + EMI + Savings + Gold)',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
-                              fontSize: context.isMobileSmall ? 10 : 11,
-                              fontStyle: FontStyle.italic,
-                            ),
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Available: ${CurrencyFormatter.format(controller.monthAvailableMoney)}',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.95),
+                                  fontSize: context.isMobileSmall ? 11 : 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                'Opening: ${CurrencyFormatter.format(controller.monthOpeningBalance)}',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  fontSize: context.isMobileSmall ? 10 : 11,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // --- Monthly Carry-Forward Summary Section ---
+                    _buildMonthlySummaryCard(
+                      context,
+                      selectedDate: selectedDate,
+                      openingBalance: controller.monthOpeningBalance,
+                      income: monthIncome,
+                      expenses: controller.monthTotalOutflows,
+                      remaining: monthBalance,
+                      isDark: isDark,
                     ),
                     const SizedBox(height: 14),
 
@@ -215,7 +240,11 @@ class DashboardView extends StatelessWidget {
                                 amount: monthIncome,
                                 icon: Icons.arrow_downward,
                                 color: AppColors.income,
-                                onTap: () => QuickAddModal.show(context, initialType: TransactionType.income),
+                                onTap: () => QuickAddModal.show(
+                                  context,
+                                  initialType: TransactionType.income,
+                                  initialDate: controller.effectiveDateForNewEntry,
+                                ),
                               ),
                             ),
                             SizedBox(
@@ -225,7 +254,11 @@ class DashboardView extends StatelessWidget {
                                 amount: monthExpense,
                                 icon: Icons.arrow_upward,
                                 color: AppColors.expense,
-                                onTap: () => QuickAddModal.show(context, initialType: TransactionType.expense),
+                                onTap: () => QuickAddModal.show(
+                                  context,
+                                  initialType: TransactionType.expense,
+                                  initialDate: controller.effectiveDateForNewEntry,
+                                ),
                               ),
                             ),
                             SizedBox(
@@ -302,7 +335,7 @@ class DashboardView extends StatelessWidget {
                             leading: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: AppColors.emi.withOpacity(0.12),
+                                color: AppColors.emi.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: const Icon(Icons.receipt, color: AppColors.emi, size: 20),
@@ -472,6 +505,7 @@ class DashboardView extends StatelessWidget {
                     else
                       ...recentTxs.map((tx) => TransactionTile(
                             transaction: tx,
+                            onEdit: () => EditTransactionModal.show(context, tx),
                             onDelete: () => controller.repo.deleteTransaction(tx.id),
                           )),
 
@@ -487,9 +521,183 @@ class DashboardView extends StatelessWidget {
         heroTag: 'fab_dashboard',
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        onPressed: () => QuickAddModal.show(context),
+        onPressed: () => QuickAddModal.show(context, initialDate: controller.effectiveDateForNewEntry),
         icon: const Icon(Icons.add),
         label: const Text('Add Entry', style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  Widget _buildMonthlySummaryCard(
+    BuildContext context, {
+    required DateTime selectedDate,
+    required num openingBalance,
+    required num income,
+    required num expenses,
+    required num remaining,
+    required bool isDark,
+  }) {
+    final isSmall = context.isMobileSmall;
+    final cardBg = isDark ? AppColors.darkSurface : Colors.white;
+
+    return Container(
+      padding: EdgeInsets.all(isSmall ? 12 : 16),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.assessment_outlined, color: AppColors.primary, size: 18),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${DateFormatter.formatMonthYear(selectedDate)} Summary',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.sync_alt, size: 12, color: Colors.blue),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Carry-Forward',
+                      style: TextStyle(
+                        fontSize: isSmall ? 9.5 : 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final width = (constraints.maxWidth - 10) / 2;
+              return Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _buildSummaryItem(
+                    width: width,
+                    label: 'Opening Balance',
+                    amount: openingBalance,
+                    color: Colors.blue.shade600,
+                    icon: Icons.account_balance_outlined,
+                    note: 'From previous month',
+                  ),
+                  _buildSummaryItem(
+                    width: width,
+                    label: 'Income',
+                    amount: income,
+                    color: AppColors.income,
+                    icon: Icons.arrow_downward,
+                    prefix: '+',
+                    note: 'Total inflow',
+                  ),
+                  _buildSummaryItem(
+                    width: width,
+                    label: 'Expenses & Outflows',
+                    amount: expenses,
+                    color: AppColors.expense,
+                    icon: Icons.arrow_upward,
+                    prefix: '-',
+                    note: 'Spend & allocations',
+                  ),
+                  _buildSummaryItem(
+                    width: width,
+                    label: 'Remaining Balance',
+                    amount: remaining,
+                    color: remaining >= 0 ? AppColors.income : AppColors.expense,
+                    icon: Icons.account_balance_wallet,
+                    note: 'Carries to next month',
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryItem({
+    required double width,
+    required String label,
+    required num amount,
+    required Color color,
+    required IconData icon,
+    required String note,
+    String prefix = '',
+  }) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '$prefix${CurrencyFormatter.format(amount)}',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: color),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            note,
+            style: const TextStyle(fontSize: 9.5, color: Colors.grey),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }

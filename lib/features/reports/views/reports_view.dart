@@ -53,7 +53,7 @@ class _ReportsViewState extends State<ReportsView> {
           Colors.indigo,
         ];
         int colorIdx = 0;
-        final totalExpense = expenseMap.values.fold(0.0, (s, v) => s + v);
+        final totalExpense = expenseMap.values.fold<num>(0, (s, v) => s + v);
 
         expenseMap.forEach((category, amount) {
           final pct = totalExpense > 0 ? (amount / totalExpense * 100) : 0.0;
@@ -87,13 +87,13 @@ class _ReportsViewState extends State<ReportsView> {
               x: _selectedMonthsBack - 1 - i,
               barRods: [
                 BarChartRodData(
-                  toY: inc,
+                  toY: inc.toDouble(),
                   color: AppColors.income,
                   width: 12,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                 ),
                 BarChartRodData(
-                  toY: exp,
+                  toY: exp.toDouble(),
                   color: AppColors.expense,
                   width: 12,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),

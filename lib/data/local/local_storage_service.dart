@@ -121,6 +121,40 @@ class LocalStorageService extends GetxService {
     }
   }
 
+  // --- Gold EMI Plans ---
+  Future<void> saveGoldEmiPlans(List<GoldEmiPlanModel> items) async {
+    final rawList = items.map((e) => e.toJson()).toList();
+    await _prefs.setString(AppConstants.keyGoldEmiPlans, jsonEncode(rawList));
+  }
+
+  List<GoldEmiPlanModel> loadGoldEmiPlans() {
+    final raw = _prefs.getString(AppConstants.keyGoldEmiPlans);
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      return decoded.map((e) => GoldEmiPlanModel.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  // --- Gold SIP Schemes ---
+  Future<void> saveGoldSipSchemes(List<GoldSipSchemeModel> items) async {
+    final rawList = items.map((e) => e.toJson()).toList();
+    await _prefs.setString(AppConstants.keyGoldSipSchemes, jsonEncode(rawList));
+  }
+
+  List<GoldSipSchemeModel> loadGoldSipSchemes() {
+    final raw = _prefs.getString(AppConstants.keyGoldSipSchemes);
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      return decoded.map((e) => GoldSipSchemeModel.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
   // --- Budgets ---
   Future<void> saveBudgets(List<BudgetModel> items) async {
     final rawList = items.map((e) => e.toJson()).toList();
@@ -194,6 +228,8 @@ class LocalStorageService extends GetxService {
       'savingGoals': jsonDecode(_prefs.getString(AppConstants.keySavingGoals) ?? '[]'),
       'savingsRecords': jsonDecode(_prefs.getString(AppConstants.keySavingsRecords) ?? '[]'),
       'goldInvestments': jsonDecode(_prefs.getString(AppConstants.keyGoldInvestments) ?? '[]'),
+      'goldEmiPlans': jsonDecode(_prefs.getString(AppConstants.keyGoldEmiPlans) ?? '[]'),
+      'goldSipSchemes': jsonDecode(_prefs.getString(AppConstants.keyGoldSipSchemes) ?? '[]'),
       'budgets': jsonDecode(_prefs.getString(AppConstants.keyBudgets) ?? '[]'),
       'recurringRules': jsonDecode(_prefs.getString(AppConstants.keyRecurringRules) ?? '[]'),
       'settings': jsonDecode(_prefs.getString(AppConstants.keyAppSettings) ?? '{}'),
@@ -221,6 +257,12 @@ class LocalStorageService extends GetxService {
       }
       if (map['goldInvestments'] != null) {
         await _prefs.setString(AppConstants.keyGoldInvestments, jsonEncode(map['goldInvestments']));
+      }
+      if (map['goldEmiPlans'] != null) {
+        await _prefs.setString(AppConstants.keyGoldEmiPlans, jsonEncode(map['goldEmiPlans']));
+      }
+      if (map['goldSipSchemes'] != null) {
+        await _prefs.setString(AppConstants.keyGoldSipSchemes, jsonEncode(map['goldSipSchemes']));
       }
       if (map['budgets'] != null) {
         await _prefs.setString(AppConstants.keyBudgets, jsonEncode(map['budgets']));

@@ -34,27 +34,50 @@ class DashboardController extends GetxController {
 
   DateTime get selectedDate => DateTime(currentYear.value, currentMonth.value, 1);
 
+  DateTime get effectiveDateForNewEntry {
+    final now = DateTime.now();
+    if (currentYear.value == now.year && currentMonth.value == now.month) {
+      return now;
+    }
+    final daysInMonth = DateTime(currentYear.value, currentMonth.value + 1, 0).day;
+    final day = now.day.clamp(1, daysInMonth);
+    return DateTime(currentYear.value, currentMonth.value, day);
+  }
+
   // Computed metrics for selected month
-  double get monthIncome =>
+  num get monthIncome =>
       repo.getTotalIncome(month: currentMonth.value, year: currentYear.value);
 
-  double get monthExpense =>
+  num get monthExpense =>
       repo.getTotalExpenses(month: currentMonth.value, year: currentYear.value);
 
-  double get monthEmi =>
+  num get monthEmi =>
       repo.getTotalEmiPaid(month: currentMonth.value, year: currentYear.value);
 
-  double get monthSavings =>
+  num get monthSavings =>
       repo.getTotalSavingsAllocated(month: currentMonth.value, year: currentYear.value);
 
-  double get monthGold =>
+  num get monthGold =>
       repo.getTotalGoldInvested(month: currentMonth.value, year: currentYear.value);
 
-  double get monthAvailableBalance =>
+  num get monthAvailableBalance =>
       repo.getAvailableBalance(month: currentMonth.value, year: currentYear.value);
 
-  double get allTimeBalance => repo.allTimeAvailableBalance;
-  double get totalNetWorth => repo.totalNetWorth;
+  // Carry-Forward Opening & Closing Balances
+  num get monthOpeningBalance =>
+      repo.getOpeningBalance(currentMonth.value, currentYear.value);
+
+  num get monthAvailableMoney =>
+      repo.getMonthAvailableMoney(currentMonth.value, currentYear.value);
+
+  num get monthRemainingBalance =>
+      repo.getMonthClosingBalance(currentMonth.value, currentYear.value);
+
+  num get monthTotalOutflows =>
+      monthExpense + monthEmi + monthSavings + monthGold;
+
+  num get allTimeBalance => repo.allTimeAvailableBalance;
+  num get totalNetWorth => repo.totalNetWorth;
 
   List<TransactionModel> get recentTransactions {
     final list = List<TransactionModel>.from(repo.transactions);

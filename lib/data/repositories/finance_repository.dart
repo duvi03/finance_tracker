@@ -23,6 +23,9 @@ class FinanceRepository extends GetxController {
   final savingGoals = <SavingGoalModel>[].obs;
   final savingsRecords = <SavingRecordModel>[].obs;
   final goldInvestments = <GoldInvestmentModel>[].obs;
+  final goldEmiPlans = <GoldEmiPlanModel>[].obs;
+  final goldSipSchemes = <GoldSipSchemeModel>[].obs;
+  final currentGoldRatePerGram = 7250.0.obs;
   final budgets = <BudgetModel>[].obs;
   final recurringRules = <RecurringRuleModel>[].obs;
   final settings = const AppSettingsModel().obs;
@@ -45,6 +48,8 @@ class FinanceRepository extends GetxController {
     savingGoals.value = _storage.loadSavingGoals();
     savingsRecords.value = _storage.loadSavingsRecords();
     goldInvestments.value = _storage.loadGoldInvestments();
+    goldEmiPlans.value = _storage.loadGoldEmiPlans();
+    goldSipSchemes.value = _storage.loadGoldSipSchemes();
     budgets.value = _storage.loadBudgets();
     recurringRules.value = _storage.loadRecurringRules();
 
@@ -298,17 +303,82 @@ class FinanceRepository extends GetxController {
     await _storage.saveTransactions(transactions);
   }
 
-  Future<void> updateTransaction(TransactionModel tx) async {
-    final index = transactions.indexWhere((t) => t.id == tx.id);
+  Future<void> updateTransaction(TransactionModel updatedTx) async {
+    final index = transactions.indexWhere((t) => t.id == updatedTx.id);
     if (index != -1) {
-      transactions[index] = tx;
+      final oldTx = transactions[index];
+
+      // Revert old saving goal currentAmount if linked
+      if (oldTx.type == TransactionType.saving && oldTx.sourceId != null) {
+        final oldGoalIdx = savingGoals.indexWhere((g) => g.id == oldTx.sourceId);
+        if (oldGoalIdx != -1) {
+          final oldGoal = savingGoals[oldGoalIdx];
+          final newCurr = (oldGoal.currentAmount - oldTx.amount) < 0 ? 0 : (oldGoal.currentAmount - oldTx.amount);
+          savingGoals[oldGoalIdx] = oldGoal.copyWith(currentAmount: newCurr);
+        }
+      }
+
+      // Add to new saving goal currentAmount if linked
+      if (updatedTx.type == TransactionType.saving && updatedTx.sourceId != null) {
+        final newGoalIdx = savingGoals.indexWhere((g) => g.id == updatedTx.sourceId);
+        if (newGoalIdx != -1) {
+          final goal = savingGoals[newGoalIdx];
+          savingGoals[newGoalIdx] = goal.copyWith(currentAmount: goal.currentAmount + updatedTx.amount);
+        }
+      }
+      await _storage.saveSavingGoals(savingGoals);
+
+      // Sync savingsRecords
+      final recIdx = savingsRecords.indexWhere((r) => r.transactionId == updatedTx.id);
+      if (recIdx != -1) {
+        if (updatedTx.type == TransactionType.saving) {
+          savingsRecords[recIdx] = savingsRecords[recIdx].copyWith(
+            amount: updatedTx.amount,
+            date: updatedTx.date,
+            goalId: updatedTx.sourceId,
+            category: updatedTx.title,
+            description: updatedTx.notes,
+          );
+        } else {
+          savingsRecords.removeAt(recIdx);
+        }
+        await _storage.saveSavingsRecords(savingsRecords);
+      } else if (updatedTx.type == TransactionType.saving) {
+        savingsRecords.add(SavingRecordModel(
+          id: _uuid.v4(),
+          goalId: updatedTx.sourceId,
+          amount: updatedTx.amount,
+          date: updatedTx.date,
+          category: updatedTx.title,
+          description: updatedTx.notes,
+          transactionId: updatedTx.id,
+        ));
+        await _storage.saveSavingsRecords(savingsRecords);
+      }
+
+      transactions[index] = updatedTx;
       await _storage.saveTransactions(transactions);
     }
   }
 
   Future<void> deleteTransaction(String id) async {
-    transactions.removeWhere((t) => t.id == id);
-    await _storage.saveTransactions(transactions);
+    final txIndex = transactions.indexWhere((t) => t.id == id);
+    if (txIndex != -1) {
+      final tx = transactions[txIndex];
+      if (tx.type == TransactionType.saving && tx.sourceId != null) {
+        final gIdx = savingGoals.indexWhere((g) => g.id == tx.sourceId);
+        if (gIdx != -1) {
+          final g = savingGoals[gIdx];
+          final newAmt = (g.currentAmount - tx.amount) < 0 ? 0 : (g.currentAmount - tx.amount);
+          savingGoals[gIdx] = g.copyWith(currentAmount: newAmt);
+          await _storage.saveSavingGoals(savingGoals);
+        }
+      }
+      savingsRecords.removeWhere((r) => r.transactionId == id);
+      await _storage.saveSavingsRecords(savingsRecords);
+      transactions.removeAt(txIndex);
+      await _storage.saveTransactions(transactions);
+    }
   }
 
   // --- Category Management ---
@@ -430,7 +500,7 @@ class FinanceRepository extends GetxController {
 
   Future<void> addSavingDeposit({
     required String? goalId,
-    required double amount,
+    required num amount,
     required DateTime date,
     required String category,
     String? description,
@@ -477,10 +547,84 @@ class FinanceRepository extends GetxController {
     await addTransaction(tx);
   }
 
+  /// Withdraw / expense from savings goal (returns funds to available spendable cash)
+  Future<void> addSavingWithdrawal({
+    required String? goalId,
+    required num amount,
+    required DateTime date,
+    required String category,
+    String? description,
+  }) async {
+    final txId = _uuid.v4();
+    final recordId = _uuid.v4();
+
+    final record = SavingRecordModel(
+      id: recordId,
+      goalId: goalId,
+      amount: amount,
+      date: date,
+      category: category,
+      description: description,
+      transactionId: txId,
+      type: SavingRecordType.withdrawal,
+    );
+    savingsRecords.add(record);
+    await _storage.saveSavingsRecords(savingsRecords);
+
+    // Deduct from goal currentAmount if linked
+    if (goalId != null) {
+      final goalIndex = savingGoals.indexWhere((g) => g.id == goalId);
+      if (goalIndex != -1) {
+        final goal = savingGoals[goalIndex];
+        final newAmt = (goal.currentAmount - amount) < 0 ? 0 : (goal.currentAmount - amount);
+        savingGoals[goalIndex] = goal.copyWith(
+          currentAmount: newAmt,
+        );
+        await _storage.saveSavingGoals(savingGoals);
+      }
+    }
+
+    // Add cash inflow transaction (funds returned to spendable cash)
+    final tx = TransactionModel(
+      id: txId,
+      title: 'Savings Withdrawal: $category',
+      amount: amount,
+      date: date,
+      type: TransactionType.income,
+      categoryId: 'savings_withdrawal',
+      sourceId: goalId,
+      notes: description ?? 'Funds withdrawn from $category into spendable balance',
+      createdAt: DateTime.now(),
+    );
+    await addTransaction(tx);
+  }
+
+  Future<void> deleteSavingRecord(String id) async {
+    final rec = savingsRecords.firstWhereOrNull((r) => r.id == id);
+    if (rec != null) {
+      if (rec.transactionId != null) {
+        await deleteTransaction(rec.transactionId!);
+      }
+      if (rec.goalId != null) {
+        final goalIndex = savingGoals.indexWhere((g) => g.id == rec.goalId);
+        if (goalIndex != -1) {
+          final goal = savingGoals[goalIndex];
+          final adjusted = rec.type.isDeposit
+              ? (goal.currentAmount - rec.amount < 0 ? 0 : goal.currentAmount - rec.amount)
+              : goal.currentAmount + rec.amount;
+          savingGoals[goalIndex] = goal.copyWith(currentAmount: adjusted);
+          await _storage.saveSavingGoals(savingGoals);
+        }
+      }
+      savingsRecords.removeWhere((r) => r.id == id);
+      await _storage.saveSavingsRecords(savingsRecords);
+    }
+  }
+
   // --- Gold Investment Management ---
   Future<void> addGoldInvestment({
-    required double amountInr,
-    required double quantity,
+    required num amountInr,
+    required num quantity,
     required GoldUnit unit,
     required DateTime date,
     String? notes,
@@ -500,6 +644,7 @@ class FinanceRepository extends GetxController {
       ratePerGram: ratePerGram,
       notes: notes,
       transactionId: txId,
+      type: GoldEntryType.buy,
     );
     goldInvestments.add(goldInv);
     await _storage.saveGoldInvestments(goldInvestments);
@@ -519,6 +664,60 @@ class FinanceRepository extends GetxController {
     await addTransaction(tx);
   }
 
+  /// Sell gold holdings (decreases vault grams, credits spendable cash, records profit/loss)
+  Future<bool> sellGoldInvestment({
+    required num amountInr,
+    required num quantity,
+    required GoldUnit unit,
+    required DateTime date,
+    String? notes,
+  }) async {
+    final normalizedGrams = GoldInvestmentModel.normalizeToGrams(quantity, unit);
+    if (normalizedGrams <= 0 || totalGoldGrams < normalizedGrams) {
+      return false; // Cannot sell more than owned
+    }
+
+    final avgRate = averageGoldRatePerGram;
+    final costBasis = normalizedGrams * avgRate;
+    final realizedProfit = amountInr - costBasis;
+    final goldId = _uuid.v4();
+    final txId = _uuid.v4();
+
+    final goldInv = GoldInvestmentModel(
+      id: goldId,
+      amountInr: amountInr,
+      quantityInGrams: normalizedGrams,
+      inputUnit: unit,
+      inputQuantity: quantity,
+      purchaseDate: date,
+      ratePerGram: normalizedGrams > 0 ? amountInr / normalizedGrams : 0.0,
+      notes: notes,
+      transactionId: txId,
+      type: GoldEntryType.sell,
+      realizedProfitLoss: realizedProfit,
+    );
+    goldInvestments.add(goldInv);
+    await _storage.saveGoldInvestments(goldInvestments);
+
+    // Add cash income transaction for gold sale proceeds
+    final profitText = realizedProfit >= 0
+        ? '+${CurrencyFormatter.format(realizedProfit)}'
+        : '-${CurrencyFormatter.format(realizedProfit.abs())}';
+    final tx = TransactionModel(
+      id: txId,
+      title: 'Gold Sale (${normalizedGrams.toStringAsFixed(2)}g)',
+      amount: amountInr,
+      date: date,
+      type: TransactionType.income,
+      categoryId: 'gold_sale',
+      sourceId: goldId,
+      notes: notes != null ? '$notes (Profit/Loss: $profitText)' : 'Profit/Loss: $profitText',
+      createdAt: DateTime.now(),
+    );
+    await addTransaction(tx);
+    return true;
+  }
+
   Future<void> deleteGoldInvestment(String id) async {
     final inv = goldInvestments.firstWhereOrNull((g) => g.id == id);
     if (inv != null && inv.transactionId != null) {
@@ -528,10 +727,164 @@ class FinanceRepository extends GetxController {
     await _storage.saveGoldInvestments(goldInvestments);
   }
 
+  // --- Gold EMI & Schemes Management ---
+  Future<void> addGoldEmiPlan(GoldEmiPlanModel plan) async {
+    goldEmiPlans.add(plan);
+    await _storage.saveGoldEmiPlans(goldEmiPlans);
+  }
+
+  Future<void> updateGoldEmiPlan(GoldEmiPlanModel plan) async {
+    final index = goldEmiPlans.indexWhere((p) => p.id == plan.id);
+    if (index != -1) {
+      goldEmiPlans[index] = plan;
+      await _storage.saveGoldEmiPlans(goldEmiPlans);
+    }
+  }
+
+  Future<void> deleteGoldEmiPlan(String id) async {
+    final plan = goldEmiPlans.firstWhereOrNull((p) => p.id == id);
+    if (plan != null) {
+      for (final payment in plan.payments) {
+        if (payment.transactionId != null) {
+          await deleteTransaction(payment.transactionId!);
+        }
+      }
+    }
+    goldEmiPlans.removeWhere((p) => p.id == id);
+    await _storage.saveGoldEmiPlans(goldEmiPlans);
+  }
+
+  Future<void> toggleGoldEmiPayment(String planId, String paymentId) async {
+    final planIndex = goldEmiPlans.indexWhere((p) => p.id == planId);
+    if (planIndex == -1) return;
+
+    final plan = goldEmiPlans[planIndex];
+    final paymentIndex = plan.payments.indexWhere((p) => p.id == paymentId);
+    if (paymentIndex == -1) return;
+
+    final payment = plan.payments[paymentIndex];
+    final newPayments = List<GoldEmiPaymentModel>.from(plan.payments);
+
+    if (payment.isPaid) {
+      // Mark as unpaid
+      if (payment.transactionId != null) {
+        await deleteTransaction(payment.transactionId!);
+      }
+      newPayments[paymentIndex] = payment.copyWith(
+        isPaid: false,
+        paidDate: null,
+        transactionId: null,
+      );
+    } else {
+      // Mark as paid
+      final txId = _uuid.v4();
+      final now = DateTime.now();
+      final tx = TransactionModel(
+        id: txId,
+        title: 'Gold EMI ${payment.installmentNumber}/${plan.numberOfInstallments}: ${plan.planName}',
+        amount: payment.amount,
+        date: payment.dueDate.isBefore(now) ? payment.dueDate : now,
+        type: TransactionType.emi,
+        categoryId: 'gold_emi',
+        sourceId: plan.id,
+        notes: plan.type.isBorrowLoan
+            ? 'Gold Loan installment with interest'
+            : 'Gold Scheme installment (Bonus: ${plan.rateOrBonusPercent}%)',
+        createdAt: now,
+      );
+      await addTransaction(tx);
+
+      newPayments[paymentIndex] = payment.copyWith(
+        isPaid: true,
+        paidDate: now,
+        transactionId: txId,
+      );
+    }
+
+    goldEmiPlans[planIndex] = plan.copyWith(payments: newPayments);
+    await _storage.saveGoldEmiPlans(goldEmiPlans);
+  }
+
+  // --- Gold SIP Schemes Management ---
+  Future<void> addGoldSipScheme(GoldSipSchemeModel scheme) async {
+    goldSipSchemes.add(scheme);
+    await _storage.saveGoldSipSchemes(goldSipSchemes);
+  }
+
+  Future<void> updateGoldSipScheme(GoldSipSchemeModel scheme) async {
+    final index = goldSipSchemes.indexWhere((s) => s.id == scheme.id);
+    if (index != -1) {
+      goldSipSchemes[index] = scheme;
+      await _storage.saveGoldSipSchemes(goldSipSchemes);
+    }
+  }
+
+  Future<void> deleteGoldSipScheme(String id) async {
+    final scheme = goldSipSchemes.firstWhereOrNull((s) => s.id == id);
+    if (scheme != null) {
+      for (final payment in scheme.payments) {
+        if (payment.transactionId != null) {
+          await deleteTransaction(payment.transactionId!);
+        }
+      }
+    }
+    goldSipSchemes.removeWhere((s) => s.id == id);
+    await _storage.saveGoldSipSchemes(goldSipSchemes);
+  }
+
+  Future<void> toggleGoldSipPayment(String schemeId, String paymentId) async {
+    final schemeIndex = goldSipSchemes.indexWhere((s) => s.id == schemeId);
+    if (schemeIndex == -1) return;
+
+    final scheme = goldSipSchemes[schemeIndex];
+    final paymentIndex = scheme.payments.indexWhere((p) => p.id == paymentId);
+    if (paymentIndex == -1) return;
+
+    final payment = scheme.payments[paymentIndex];
+    final newPayments = List<GoldEmiPaymentModel>.from(scheme.payments);
+
+    if (payment.isPaid) {
+      // Mark as unpaid
+      if (payment.transactionId != null) {
+        await deleteTransaction(payment.transactionId!);
+      }
+      newPayments[paymentIndex] = payment.copyWith(
+        isPaid: false,
+        paidDate: null,
+        transactionId: null,
+      );
+    } else {
+      // Mark as paid
+      final txId = _uuid.v4();
+      final now = DateTime.now();
+      final tx = TransactionModel(
+        id: txId,
+        title: 'Gold SIP ${payment.installmentNumber}/${scheme.totalMonths}: ${scheme.schemeName}',
+        amount: payment.amount,
+        date: payment.dueDate.isBefore(now) ? payment.dueDate : now,
+        type: TransactionType.gold,
+        categoryId: 'gold_sip',
+        sourceId: scheme.id,
+        notes: '${scheme.jewelerName} Gold SIP installment (Current benefit: ${scheme.benefitPercentAt(payment.installmentNumber)}%)',
+        createdAt: now,
+      );
+      await addTransaction(tx);
+
+      newPayments[paymentIndex] = payment.copyWith(
+        isPaid: true,
+        paidDate: now,
+        transactionId: txId,
+      );
+    }
+
+    goldSipSchemes[schemeIndex] = scheme.copyWith(payments: newPayments);
+    await _storage.saveGoldSipSchemes(goldSipSchemes);
+  }
+
   // --- Budget Management ---
   Future<void> setBudget({
     required String categoryId,
-    required double monthlyLimit,
+    required num monthlyLimit,
     required int month,
     required int year,
   }) async {
@@ -677,58 +1030,58 @@ class FinanceRepository extends GetxController {
   // --- Financial Calculations & Aggregations ---
 
   /// Total Income for a given month/year (or all-time if null)
-  double getTotalIncome({int? month, int? year}) {
+  num getTotalIncome({int? month, int? year}) {
     return transactions
         .where((t) =>
             t.type == TransactionType.income &&
             (month == null || t.date.month == month) &&
             (year == null || t.date.year == year))
-        .fold(0.0, (sum, t) => sum + t.amount);
+        .fold<num>(0, (sum, t) => sum + t.amount);
   }
 
   /// Total Regular Expenses for a given month/year (excludes EMI, Saving, Gold)
-  double getTotalExpenses({int? month, int? year}) {
+  num getTotalExpenses({int? month, int? year}) {
     return transactions
         .where((t) =>
             t.type == TransactionType.expense &&
             (month == null || t.date.month == month) &&
             (year == null || t.date.year == year))
-        .fold(0.0, (sum, t) => sum + t.amount);
+        .fold<num>(0, (sum, t) => sum + t.amount);
   }
 
   /// Total EMI paid in a given month/year
-  double getTotalEmiPaid({int? month, int? year}) {
+  num getTotalEmiPaid({int? month, int? year}) {
     return transactions
         .where((t) =>
             t.type == TransactionType.emi &&
             (month == null || t.date.month == month) &&
             (year == null || t.date.year == year))
-        .fold(0.0, (sum, t) => sum + t.amount);
+        .fold<num>(0, (sum, t) => sum + t.amount);
   }
 
   /// Total Savings moved to goals/deposits in a given month/year
-  double getTotalSavingsAllocated({int? month, int? year}) {
+  num getTotalSavingsAllocated({int? month, int? year}) {
     return transactions
         .where((t) =>
             t.type == TransactionType.saving &&
             (month == null || t.date.month == month) &&
             (year == null || t.date.year == year))
-        .fold(0.0, (sum, t) => sum + t.amount);
+        .fold<num>(0, (sum, t) => sum + t.amount);
   }
 
   /// Total Gold investments in a given month/year
-  double getTotalGoldInvested({int? month, int? year}) {
+  num getTotalGoldInvested({int? month, int? year}) {
     return transactions
         .where((t) =>
             t.type == TransactionType.gold &&
             (month == null || t.date.month == month) &&
             (year == null || t.date.year == year))
-        .fold(0.0, (sum, t) => sum + t.amount);
+        .fold<num>(0, (sum, t) => sum + t.amount);
   }
 
-  /// Total Remaining / Available Cash Balance
+  /// Total Remaining / Available Cash Balance for that period alone
   /// Formula: Total Income - (Expenses + EMI + Savings + Gold)
-  double getAvailableBalance({int? month, int? year}) {
+  num getAvailableBalance({int? month, int? year}) {
     final income = getTotalIncome(month: month, year: year);
     final expense = getTotalExpenses(month: month, year: year);
     final emi = getTotalEmiPaid(month: month, year: year);
@@ -738,38 +1091,144 @@ class FinanceRepository extends GetxController {
     return income - (expense + emi + saving + gold);
   }
 
+  /// Opening balance carried forward for a given month/year:
+  /// Net cash left over from all transactions prior to the 1st day of that month.
+  num getOpeningBalance(int month, int year) {
+    final startOfMonth = DateTime(year, month, 1);
+    return transactions
+        .where((t) => t.date.isBefore(startOfMonth))
+        .fold<num>(0, (sum, t) => sum + (t.type.isIncome ? t.amount : -t.amount));
+  }
+
+  /// Total available money in that month = Opening Balance + Month Income
+  num getMonthAvailableMoney(int month, int year) {
+    return getOpeningBalance(month, year) + getTotalIncome(month: month, year: year);
+  }
+
+  /// Month Closing / Remaining Balance = Opening Balance + Month Income - Month Outflows
+  /// (this automatically becomes the next month's opening balance)
+  num getMonthClosingBalance(int month, int year) {
+    return getOpeningBalance(month, year) + getAvailableBalance(month: month, year: year);
+  }
+
   /// Overall cumulative cash balance since inception
-  double get allTimeAvailableBalance => getAvailableBalance();
+  num get allTimeAvailableBalance => getAvailableBalance();
 
-  /// Total gold accumulated in grams
-  double get totalGoldGrams =>
-      goldInvestments.fold(0.0, (sum, g) => sum + g.quantityInGrams);
+  /// Total gold accumulated in grams (Buys - Sells)
+  num get totalGoldGrams => goldInvestments.fold<num>(0, (sum, g) {
+        return g.type.isSell ? sum - g.quantityInGrams : sum + g.quantityInGrams;
+      });
 
-  /// Total INR spent on gold
-  double get totalGoldInvestedInr =>
-      goldInvestments.fold(0.0, (sum, g) => sum + g.amountInr);
+  /// Total INR net spent on gold
+  num get totalGoldInvestedInr {
+    final buysCost = goldInvestments
+        .where((g) => g.type.isBuy)
+        .fold<num>(0, (sum, g) => sum + g.amountInr);
+    final sellsProceeds = goldInvestments
+        .where((g) => g.type.isSell)
+        .fold<num>(0, (sum, g) => sum + g.amountInr);
+    final net = buysCost - sellsProceeds;
+    return net < 0 ? 0 : net;
+  }
 
   /// Average purchase rate per gram
-  double get averageGoldRatePerGram =>
-      totalGoldGrams > 0 ? totalGoldInvestedInr / totalGoldGrams : 0.0;
+  num get averageGoldRatePerGram {
+    final buys = goldInvestments.where((g) => g.type.isBuy).toList();
+    final buyGrams = buys.fold<num>(0, (sum, g) => sum + g.quantityInGrams);
+    final buyCost = buys.fold<num>(0, (sum, g) => sum + g.amountInr);
+    return buyGrams > 0 ? buyCost / buyGrams : 0.0;
+  }
+
+  /// Total realized profit or loss from gold sales
+  num get totalGoldRealizedProfitLoss => goldInvestments
+      .where((g) => g.type.isSell && g.realizedProfitLoss != null)
+      .fold<num>(0, (sum, g) => sum + g.realizedProfitLoss!);
+
+  /// Gold inventory opening grams before 1st of that month
+  num getGoldOpeningGrams(int month, int year) {
+    final startOfMonth = DateTime(year, month, 1);
+    return goldInvestments
+        .where((g) => g.purchaseDate.isBefore(startOfMonth))
+        .fold<num>(0, (sum, g) => g.type.isBuy ? sum + g.quantityInGrams : sum - g.quantityInGrams);
+  }
+
+  /// Gold bought in month (grams)
+  num getMonthGoldBoughtGrams(int month, int year) {
+    return goldInvestments
+        .where((g) =>
+            g.type.isBuy &&
+            g.purchaseDate.month == month &&
+            g.purchaseDate.year == year)
+        .fold<num>(0, (sum, g) => sum + g.quantityInGrams);
+  }
+
+  /// Gold sold in month (grams)
+  num getMonthGoldSoldGrams(int month, int year) {
+    return goldInvestments
+        .where((g) =>
+            g.type.isSell &&
+            g.purchaseDate.month == month &&
+            g.purchaseDate.year == year)
+        .fold<num>(0, (sum, g) => sum + g.quantityInGrams);
+  }
+
+  /// Gold closing grams for month (Opening + Bought - Sold)
+  num getGoldClosingGrams(int month, int year) {
+    return getGoldOpeningGrams(month, year) +
+        getMonthGoldBoughtGrams(month, year) -
+        getMonthGoldSoldGrams(month, year);
+  }
+
+  /// Total savings withdrawn in month/year
+  num getTotalSavingsWithdrawn({int? month, int? year}) {
+    return savingsRecords
+        .where((r) =>
+            r.type == SavingRecordType.withdrawal &&
+            (month == null || r.date.month == month) &&
+            (year == null || r.date.year == year))
+        .fold<num>(0, (sum, r) => sum + r.amount);
+  }
+
+  /// Opening savings balance before 1st of month
+  num getSavingsOpeningBalance(int month, int year) {
+    final startOfMonth = DateTime(year, month, 1);
+    return savingsRecords
+        .where((r) => r.date.isBefore(startOfMonth))
+        .fold<num>(0, (sum, r) => r.type.isDeposit ? sum + r.amount : sum - r.amount);
+  }
+
+  /// Closing savings balance for month (Opening + Deposited - Withdrawn)
+  num getSavingsClosingBalance(int month, int year) {
+    return getSavingsOpeningBalance(month, year) +
+        getTotalSavingsAllocated(month: month, year: year) -
+        getTotalSavingsWithdrawn(month: month, year: year);
+  }
 
   /// Total accumulated savings across all goals
-  double get totalSavingsAccumulated =>
-      savingGoals.fold(0.0, (sum, g) => sum + g.currentAmount);
+  num get totalSavingsAccumulated =>
+      savingGoals.fold<num>(0, (sum, g) => sum + g.currentAmount);
 
-  /// Estimated Net Worth = Available Cash + Total Savings in Goals + Total Gold Value
-  double get totalNetWorth =>
-      allTimeAvailableBalance + totalSavingsAccumulated + totalGoldInvestedInr;
+  /// Total capital paid into Gold SIP schemes
+  num get totalGoldSipPaidInr =>
+      goldSipSchemes.fold<num>(0, (sum, sc) => sum + sc.totalPaidAmount);
+
+  /// Total accrued jewellery purchase value across active Gold SIP schemes
+  num get totalGoldSipJewelleryValueInr =>
+      goldSipSchemes.fold<num>(0, (sum, sc) => sum + sc.currentJewelleryValue);
+
+  /// Estimated Net Worth = Available Cash + Total Savings in Goals + Total Gold Value + Gold SIP Jewellery Value
+  num get totalNetWorth =>
+      allTimeAvailableBalance + totalSavingsAccumulated + totalGoldInvestedInr + totalGoldSipJewelleryValueInr;
 
   /// Get spending for a specific category in month/year
-  double getCategorySpending(String categoryId, int month, int year) {
+  num getCategorySpending(String categoryId, int month, int year) {
     return transactions
         .where((t) =>
             t.categoryId == categoryId &&
             t.type == TransactionType.expense &&
             t.date.month == month &&
             t.date.year == year)
-        .fold(0.0, (sum, t) => sum + t.amount);
+        .fold<num>(0, (sum, t) => sum + t.amount);
   }
 
   /// Get all upcoming pending EMI installments across all plans

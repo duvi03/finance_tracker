@@ -5,7 +5,7 @@ import 'package:finance_tracker/core/utils/responsive_utils.dart';
 
 class MetricSummaryCard extends StatelessWidget {
   final String label;
-  final double amount;
+  final num amount;
   final IconData icon;
   final Color color;
   final String? subtitle;
@@ -48,7 +48,7 @@ class MetricSummaryCard extends StatelessWidget {
                   Container(
                     padding: EdgeInsets.all(iconPadding),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.12),
+                      color: color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(icon, color: color, size: iconSize),

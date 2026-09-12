@@ -7,7 +7,7 @@ class EMIPaymentModel {
   final String id;
   final String emiPlanId;
   final int installmentNumber;
-  final double amount;
+  final num amount;
   final DateTime dueDate;
   final DateTime? paidDate;
   final EMIPaymentStatus status;
@@ -30,7 +30,7 @@ class EMIPaymentModel {
     String? id,
     String? emiPlanId,
     int? installmentNumber,
-    double? amount,
+    num? amount,
     DateTime? dueDate,
     DateTime? paidDate,
     EMIPaymentStatus? status,
@@ -64,7 +64,7 @@ class EMIPaymentModel {
       id: json['id'] as String,
       emiPlanId: json['emiPlanId'] as String,
       installmentNumber: json['installmentNumber'] as int,
-      amount: (json['amount'] as num).toDouble(),
+      amount: json['amount'] as num,
       dueDate: DateTime.parse(json['dueDate'] as String),
       paidDate: json['paidDate'] != null ? DateTime.parse(json['paidDate'] as String) : null,
       status: EMIPaymentStatus.values.firstWhere(
@@ -79,10 +79,10 @@ class EMIPaymentModel {
 class EMIPlanModel {
   final String id;
   final String purchaseName;
-  final double totalAmount;
+  final num totalAmount;
   final int numberOfInstallments;
   final DateTime startDate;
-  final double monthlyEmiAmount;
+  final num monthlyEmiAmount;
   final String category;
   final String? notes;
   final List<EMIPaymentModel> payments;
@@ -103,8 +103,8 @@ class EMIPlanModel {
 
   int get paidInstallments => payments.where((p) => p.isPaid).length;
   int get remainingInstallments => numberOfInstallments - paidInstallments;
-  double get paidAmount => payments.where((p) => p.isPaid).fold(0.0, (sum, p) => sum + p.amount);
-  double get remainingAmount => (totalAmount - paidAmount).clamp(0.0, double.infinity);
+  num get paidAmount => payments.where((p) => p.isPaid).fold<num>(0, (sum, p) => sum + p.amount);
+  num get remainingAmount => (totalAmount - paidAmount) < 0 ? 0 : (totalAmount - paidAmount);
   bool get isCompleted => remainingInstallments == 0;
 
   DateTime get endDate {
@@ -123,10 +123,10 @@ class EMIPlanModel {
   EMIPlanModel copyWith({
     String? id,
     String? purchaseName,
-    double? totalAmount,
+    num? totalAmount,
     int? numberOfInstallments,
     DateTime? startDate,
-    double? monthlyEmiAmount,
+    num? monthlyEmiAmount,
     String? category,
     String? notes,
     List<EMIPaymentModel>? payments,
@@ -164,10 +164,10 @@ class EMIPlanModel {
     return EMIPlanModel(
       id: json['id'] as String,
       purchaseName: json['purchaseName'] as String,
-      totalAmount: (json['totalAmount'] as num).toDouble(),
+      totalAmount: json['totalAmount'] as num,
       numberOfInstallments: json['numberOfInstallments'] as int,
       startDate: DateTime.parse(json['startDate'] as String),
-      monthlyEmiAmount: (json['monthlyEmiAmount'] as num).toDouble(),
+      monthlyEmiAmount: json['monthlyEmiAmount'] as num,
       category: json['category'] as String? ?? 'EMI',
       notes: json['notes'] as String?,
       payments: rawPayments.map((p) => EMIPaymentModel.fromJson(p as Map<String, dynamic>)).toList(),
@@ -181,7 +181,7 @@ class EMIPlanModel {
     required String emiPlanId,
     required DateTime startDate,
     required int numberOfInstallments,
-    required double monthlyAmount,
+    required num monthlyAmount,
   }) {
     final schedule = <EMIPaymentModel>[];
     for (int i = 0; i < numberOfInstallments; i++) {

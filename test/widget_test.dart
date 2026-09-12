@@ -76,5 +76,64 @@ void main() {
       expect(restored.amount, tx.amount);
       expect(restored.type, tx.type);
     });
+
+    test('30-Month Gold SIP Tiered Scheme Calculations', () {
+      final startDate = DateTime(2026, 1, 1);
+      final schemeId = 'sip_test_1';
+      final payments = GoldSipSchemeModel.generateSchedule(
+        schemeId: schemeId,
+        startDate: startDate,
+        numberOfInstallments: 30,
+        monthlyAmount: 20000,
+      );
+
+      final scheme = GoldSipSchemeModel(
+        id: schemeId,
+        schemeName: '30-Month Gold Savings Scheme',
+        jewelerName: 'Tanishq',
+        monthlyInstallment: 20000,
+        totalMonths: 30,
+        maturityWaitDays: 30,
+        startDate: startDate,
+        monthBenefitPercents: GoldSipSchemeModel.default30MonthTierSchedule,
+        payments: payments,
+        createdAt: startDate,
+      );
+
+      // Total Capital
+      expect(scheme.totalContractedAmount, 600000);
+
+      // Month 6 tier: 20% benefit = 4,000; jewellery value = 1,24,000
+      expect(scheme.benefitPercentAt(6), 20.0);
+      expect(scheme.benefitAmountAt(6), 4000);
+      final rows = scheme.buildTierSchedule();
+      expect(rows[5].cumulativePaid, 120000);
+      expect(rows[5].jewelleryValue, 124000);
+
+      // Month 14 tier: 100% benefit = 20,000; jewellery value = 3,00,000
+      expect(scheme.benefitPercentAt(14), 100.0);
+      expect(scheme.benefitAmountAt(14), 20000);
+      expect(rows[13].cumulativePaid, 280000);
+      expect(rows[13].jewelleryValue, 300000);
+
+      // Month 30 tier: 450% benefit = 90,000; final jewellery value = 6,90,000
+      expect(scheme.finalBenefitPercent, 450.0);
+      expect(scheme.finalBenefitAmount, 90000);
+      expect(scheme.finalJewelleryValue, 690000);
+      expect(rows[29].cumulativePaid, 600000);
+      expect(rows[29].jewelleryValue, 690000);
+
+      // Maturity date: 30 months + 30 days
+      final expectedMaturity = DateTime(2026, 1 + 30, 1).add(const Duration(days: 30));
+      expect(scheme.maturityDate, expectedMaturity);
+
+      // JSON serialization roundtrip
+      final json = scheme.toJson();
+      final restored = GoldSipSchemeModel.fromJson(json);
+      expect(restored.schemeName, scheme.schemeName);
+      expect(restored.monthlyInstallment, 20000);
+      expect(restored.totalMonths, 30);
+      expect(restored.finalJewelleryValue, 690000);
+    });
   });
 }

@@ -9,12 +9,14 @@ import 'package:finance_tracker/data/repositories/finance_repository.dart';
 class TransactionTile extends StatelessWidget {
   final TransactionModel transaction;
   final VoidCallback? onTap;
+  final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
   const TransactionTile({
     super.key,
     required this.transaction,
     this.onTap,
+    this.onEdit,
     this.onDelete,
   });
 
@@ -77,7 +79,7 @@ class TransactionTile extends StatelessWidget {
       child: Card(
         margin: const EdgeInsets.only(bottom: 10),
         child: InkWell(
-          onTap: onTap,
+          onTap: onEdit ?? onTap,
           borderRadius: BorderRadius.circular(16),
           child: Builder(
             builder: (context) {
@@ -91,7 +93,7 @@ class TransactionTile extends StatelessWidget {
                       width: isSmall ? 38 : 44,
                       height: isSmall ? 38 : 44,
                       decoration: BoxDecoration(
-                        color: typeColor.withOpacity(0.12),
+                        color: typeColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(category.icon, color: typeColor, size: isSmall ? 18 : 22),
@@ -115,11 +117,11 @@ class TransactionTile extends StatelessWidget {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                                 decoration: BoxDecoration(
-                                  color: typeColor.withOpacity(0.1),
+                                  color: typeColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  transaction.type.displayName,
+                                  category.name,
                                   style: TextStyle(
                                     fontSize: isSmall ? 10 : 11,
                                     fontWeight: FontWeight.w600,
@@ -141,17 +143,29 @@ class TransactionTile extends StatelessWidget {
                               ),
                             ],
                           ),
-                          if (transaction.notes != null && transaction.notes!.isNotEmpty) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              transaction.notes!,
-                              style: TextStyle(
-                                fontSize: isSmall ? 11 : 12,
-                                fontStyle: FontStyle.italic,
-                                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          if (transaction.notes != null && transaction.notes!.trim().isNotEmpty) ...[
+                            const SizedBox(height: 3),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.notes,
+                                  size: 13,
+                                  color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    transaction.notes!,
+                                    style: TextStyle(
+                                      fontSize: isSmall ? 11 : 12,
+                                      fontStyle: FontStyle.italic,
+                                      color: isDark ? Colors.white70 : Colors.black87,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ],
@@ -159,21 +173,38 @@ class TransactionTile extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
 
-                    // Amount
-                    ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: isSmall ? 95 : 125),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          '${transaction.type.isIncome ? '+' : '-'}${CurrencyFormatter.format(transaction.amount, symbol: repo.settings.value.currencySymbol)}',
-                          style: TextStyle(
-                            fontSize: isSmall ? 14 : 15,
-                            fontWeight: FontWeight.bold,
-                            color: transaction.type.isIncome ? AppColors.income : (isDark ? Colors.white : Colors.black87),
+                    // Amount & Actions
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: isSmall ? 85 : 120),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              '${transaction.type.isIncome ? '+' : '-'}${CurrencyFormatter.format(transaction.amount, symbol: repo.settings.value.currencySymbol)}',
+                              style: TextStyle(
+                                fontSize: isSmall ? 14 : 15,
+                                fontWeight: FontWeight.bold,
+                                color: transaction.type.isIncome ? AppColors.income : AppColors.expense,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        if (onEdit != null) ...[
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined, size: 18),
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                            tooltip: 'Edit Transaction',
+                            color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                            onPressed: onEdit,
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),

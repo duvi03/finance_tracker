@@ -1,7 +1,7 @@
 class BudgetModel {
   final String id;
   final String categoryId;
-  final double monthlyLimit;
+  final num monthlyLimit;
   final int month;
   final int year;
 
@@ -16,7 +16,7 @@ class BudgetModel {
   BudgetModel copyWith({
     String? id,
     String? categoryId,
-    double? monthlyLimit,
+    num? monthlyLimit,
     int? month,
     int? year,
   }) {
@@ -41,7 +41,7 @@ class BudgetModel {
     return BudgetModel(
       id: json['id'] as String,
       categoryId: json['categoryId'] as String,
-      monthlyLimit: (json['monthlyLimit'] as num).toDouble(),
+      monthlyLimit: json['monthlyLimit'] as num,
       month: json['month'] as int,
       year: json['year'] as int,
     );
